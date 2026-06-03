@@ -1,0 +1,10 @@
+# Content Empire OS — pipeline dependencies (all free / open source)
+python-dotenv>=1.0
+supabase>=2.7            # Postgres/REST client (service role)
+groq>=0.11              # primary LLM (free tier)
+requests>=2.31          # Ollama fallback, Pexels, IG Graph API
+edge-tts>=6.1           # free Microsoft neural voiceover
+google-api-python-client>=2.130   # YouTube Data API v3
+google-auth-oauthlib>=1.2          # YouTube OAuth
+google-auth-httplib2>=0.2
+# ffmpeg is a system binary (installed on the VM), not a pip package.
