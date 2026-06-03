@@ -18,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from config import VOICE_DIR, VIDEO_DIR, THUMB_DIR, BROLL_DIR
 from helpers import db, llm, editorial, tts, pexels, ffmpeg
+from helpers import remotion as remotion_helper
 
 SCRIPT_SYS = (
     "You are a faceless-channel scriptwriter. You write tight, original short-form "
@@ -39,21 +40,42 @@ def build_prompt(niche: dict) -> str:
     )
 
 
-def render_video(niche: dict, audio: Path, slug: str) -> tuple[Path, Path, list[dict]]:
-    """Fetch B-roll, assemble video + thumbnail.
+def _caption_lines(script: str, max_lines: int = 7) -> list[str]:
+    """Split narration into short caption lines for the on-screen subtitles."""
+    import re
+    parts = [s.strip() for s in re.split(r"(?<=[.!?])\s+", script) if s.strip()]
+    return parts[:max_lines] or [script[:120]]
 
-    Remotion (Layer 2) is preferred for branded templates; until a template is
-    wired we use the FFmpeg fallback so the pipeline is runnable end-to-end.
-    """
-    orientation = "portrait" if niche["platform"] == "instagram" else "landscape"
-    query = random.choice(niche.get("topics") or [niche["category"]])
-    clips, credits = pexels.fetch_broll(
-        query, BROLL_DIR / slug, count=3, orientation=orientation)
+
+def render_video(niche: dict, title: str, hook: str, script: str,
+                 audio: Path, slug: str) -> tuple[Path, Path, list[dict]]:
+    """Branded Remotion render (preferred) with an FFmpeg B-roll fallback."""
+    portrait = niche["platform"] == "instagram"
+    orientation = "portrait" if portrait else "landscape"
     video_path = VIDEO_DIR / f"{slug}.mp4"
-    if orientation == "portrait":
-        ffmpeg.concat_broll(clips, audio, video_path, width=1080, height=1920)
-    else:
-        ffmpeg.concat_broll(clips, audio, video_path, width=1920, height=1080)
+    duration = ffmpeg.probe_duration(audio)
+
+    # Optional B-roll behind the branded template (and for the fallback).
+    query = random.choice(niche.get("topics") or [niche["category"]])
+    try:
+        clips, credits = pexels.fetch_broll(
+            query, BROLL_DIR / slug, count=3, orientation=orientation)
+    except Exception as e:  # noqa: BLE001 — B-roll is optional
+        print(f"[gen] no B-roll ({e}); rendering on solid background")
+        clips, credits = [], []
+
+    try:
+        remotion_helper.render(
+            niche, title, hook, _caption_lines(script), audio, video_path,
+            duration_seconds=duration, portrait=portrait,
+            bg_video=clips[0] if clips else None)
+    except Exception as e:  # noqa: BLE001 — fall back to plain FFmpeg assembly
+        print(f"[gen] Remotion render failed ({e}); FFmpeg fallback")
+        if not clips:
+            raise
+        w, h = (1080, 1920) if portrait else (1920, 1080)
+        ffmpeg.concat_broll(clips, audio, video_path, width=w, height=h)
+
     thumb_path = THUMB_DIR / f"{slug}.jpg"
     ffmpeg.thumbnail(video_path, thumb_path, at_seconds=1.0)
     return video_path, thumb_path, credits
@@ -90,7 +112,9 @@ def generate_for_channel(channel: dict) -> None:
     db.update_content(cid, status="voice", voiceover_path=str(audio))
 
     # 4. video + thumbnail
-    video, thumb, credits = render_video(niche, audio, slug)
+    video, thumb, credits = render_video(
+        niche, draft.get("title") or niche["display_name"],
+        draft.get("hook") or "", result.script, audio, slug)
     db.update_content(cid, status="video", video_path=str(video),
                       thumbnail_path=str(thumb), broll_credits=credits)
 

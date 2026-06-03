@@ -80,7 +80,7 @@ Each niche is **one row** — add/edit/replace a niche from the dashboard with n
 
 - [x] **Layer 0** — repo scaffold + Supabase schema + 10-niche seed *(live in Supabase)*
 - [x] **Layer 1** — Python pipeline (3 crons) + helpers (edge-tts, Pexels, FFmpeg, YouTube, IG)
-- [ ] **Layer 2** — Remotion props-driven templates per niche
+- [x] **Layer 2** — Remotion props-driven templates per niche *(renders verified)*
 - [x] **Layer 3** — Next.js dashboard (kanban, approval, analytics, calendar) *(buttons live-tested)*
 - [x] **Layer 4** — non-developer setup guide → [docs/SETUP.md](docs/SETUP.md)
 - [ ] **Layer 5** — deploy to Oracle VM + crontab
