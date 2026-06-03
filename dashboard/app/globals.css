@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: dark; }
+
+body {
+  @apply bg-ink text-slate-200;
+}
+
+.card { @apply bg-panel border border-edge rounded-xl; }
+.btn { @apply px-3 py-1.5 rounded-lg text-sm font-medium transition; }
+.btn-approve { @apply bg-emerald-600 hover:bg-emerald-500 text-white; }
+.btn-reject  { @apply bg-rose-600 hover:bg-rose-500 text-white; }
+.btn-ghost   { @apply bg-edge hover:bg-slate-700 text-slate-200; }
+.pill { @apply text-xs px-2 py-0.5 rounded-full bg-edge text-slate-300; }
