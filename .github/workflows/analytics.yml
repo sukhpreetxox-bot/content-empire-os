@@ -1,0 +1,32 @@
+name: analytics
+
+# Daily analytics pull + Supabase keep-alive (prevents the 7-day free-tier pause).
+on:
+  schedule:
+    - cron: "0 23 * * *"   # daily 23:00 UTC
+  workflow_dispatch:
+
+jobs:
+  analytics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - name: Restore upload credentials
+        run: |
+          mkdir -p secrets/youtube secrets/instagram
+          if [ -n "${{ secrets.YOUTUBE_TOKENS_B64 }}" ]; then
+            echo "${{ secrets.YOUTUBE_TOKENS_B64 }}" | base64 -d | tar xz -C secrets/youtube
+          fi
+          if [ -n "${{ secrets.IG_TOKENS_B64 }}" ]; then
+            echo "${{ secrets.IG_TOKENS_B64 }}" | base64 -d | tar xz -C secrets/instagram
+          fi
+      - name: Install Python deps
+        run: pip install -r pipeline/requirements.txt
+      - name: Collect analytics + keep-alive
+        run: python pipeline/analytics_cron.py

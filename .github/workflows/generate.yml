@@ -1,0 +1,47 @@
+name: generate
+
+# Generation cron — idea -> script -> editorial gate -> voiceover -> video
+# -> writes rows with status 'review' for you to approve in the dashboard.
+on:
+  schedule:
+    - cron: "0 7 * * *"   # daily 07:00 UTC (best-effort timing on Actions)
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: "Limit to one platform (youtube/instagram) or leave blank for all"
+        required: false
+        default: ""
+
+concurrency:
+  group: generate
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      GROQ_MODEL: ${{ secrets.GROQ_MODEL }}
+      PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Install Python deps
+        run: pip install -r pipeline/requirements.txt
+      - name: Install Remotion deps
+        run: npm ci --prefix remotion || npm install --prefix remotion
+      - name: Generate
+        run: |
+          if [ -n "${{ github.event.inputs.platform }}" ]; then
+            python pipeline/gen_cron.py --platform "${{ github.event.inputs.platform }}"
+          else
+            python pipeline/gen_cron.py
+          fi

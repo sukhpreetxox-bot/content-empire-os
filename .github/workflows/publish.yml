@@ -1,0 +1,41 @@
+name: publish
+
+# Publication cron — uploads only APPROVED & due rows (throttled, capped).
+# Needs YouTube OAuth tokens / Instagram tokens to be present (see SETUP.md);
+# until then it simply finds nothing to do and exits cleanly.
+on:
+  schedule:
+    - cron: "0 8-20 * * *"   # hourly during the day, UTC
+  workflow_dispatch:
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      IG_APP_ID: ${{ secrets.IG_APP_ID }}
+      IG_APP_SECRET: ${{ secrets.IG_APP_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - name: Restore upload credentials
+        run: |
+          mkdir -p secrets/youtube secrets/instagram
+          # Tokens are stored as base64 secrets to survive newlines/JSON.
+          if [ -n "${{ secrets.YOUTUBE_TOKENS_B64 }}" ]; then
+            echo "${{ secrets.YOUTUBE_TOKENS_B64 }}" | base64 -d | tar xz -C secrets/youtube
+          fi
+          if [ -n "${{ secrets.IG_TOKENS_B64 }}" ]; then
+            echo "${{ secrets.IG_TOKENS_B64 }}" | base64 -d | tar xz -C secrets/instagram
+          fi
+      - name: Install Python deps
+        run: pip install -r pipeline/requirements.txt
+      - name: Publish approved content
+        run: python pipeline/publish_cron.py
