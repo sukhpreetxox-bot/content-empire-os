@@ -83,4 +83,7 @@ Each niche is **one row** — add/edit/replace a niche from the dashboard with n
 - [x] **Layer 2** — Remotion props-driven templates per niche *(renders verified)*
 - [x] **Layer 3** — Next.js dashboard (kanban, approval, analytics, calendar) *(buttons live-tested)*
 - [x] **Layer 4** — non-developer setup guide → [docs/SETUP.md](docs/SETUP.md)
-- [ ] **Layer 5** — deploy to Oracle VM + crontab
+- [x] **Layer 5** — compute on **GitHub Actions** (free, no card) instead of an Oracle VM:
+  `.github/workflows/` run generate (daily) / publish (hourly) / analytics (daily).
+  Dashboard deployed to **Vercel** (Basic-Auth protected). First live run verified.
+- [ ] **Go-live remainder** — YouTube OAuth (5×) + Instagram tokens so `publish` can upload.
