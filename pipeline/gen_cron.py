@@ -20,6 +20,11 @@ from config import VOICE_DIR, VIDEO_DIR, THUMB_DIR, BROLL_DIR
 from helpers import db, llm, editorial, tts, pexels, ffmpeg
 from helpers import remotion as remotion_helper
 
+# Output language for scripts/titles. Niche tones are written in Dutch, which
+# made the model drift between languages — pin it here. Switch to "Dutch" (or
+# any language) in one place if you target a Dutch-speaking audience.
+SCRIPT_LANGUAGE = "English"
+
 SCRIPT_SYS = (
     "You are a faceless-channel scriptwriter. You write tight, original short-form "
     "narration with a clear, specific point of view. You never produce generic "
@@ -33,10 +38,13 @@ def build_prompt(niche: dict) -> str:
         f"Channel: {niche['display_name']} ({niche['category']}).\n"
         f"Tone: {niche['tone']}. Audience: {niche.get('audience','general')}.\n"
         f"Topic to cover: {topic}.\n\n"
-        "Write a 45-75 second narration script (~130-180 words) with a UNIQUE "
-        "angle, analysis, or transformation — not a bare list of facts.\n"
+        f"Write the title AND script entirely in {SCRIPT_LANGUAGE}.\n"
+        "Write a 60-90 second narration script. REQUIRED: at least 170 words "
+        "(scripts under 120 words are auto-rejected, so aim for 170-220). It "
+        "must carry a UNIQUE angle, analysis, or transformation — not a bare "
+        "list of facts.\n"
         'Return JSON: {"title": "...", "hook": "<3s opening line>", '
-        '"angle": "<the unique POV in one sentence>", "script": "<full narration>"}'
+        '"angle": "<the unique POV in one sentence>", "script": "<full narration, 170+ words>"}'
     )
 
 
