@@ -1,33 +1,34 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
 import { Niche } from "@/lib/types";
+import { createChannelAction } from "@/app/actions";
 
 // Add a channel by filling a form — no code change needed (modular).
 export default function ChannelForm({ niches }: { niches: Niche[] }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [pending, startTransition] = useTransition();
   const [err, setErr] = useState<string | null>(null);
   const [f, setF] = useState({
     niche_id: niches[0]?.id ?? "", platform: "youtube",
     handle: "", target_rpm_usd: "", oauth_token_ref: "", ig_user_id: "",
   });
+  const busy = pending;
 
   function set(k: string, v: string) { setF((p) => ({ ...p, [k]: v })); }
 
-  async function submit() {
-    setBusy(true); setErr(null);
-    try {
-      const res = await fetch("/api/channels", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...f, target_rpm_usd: f.target_rpm_usd ? Number(f.target_rpm_usd) : null,
-        }),
-      });
-      if (!res.ok) throw new Error((await res.json()).error || `HTTP ${res.status}`);
-      setOpen(false); setF({ ...f, handle: "" }); router.refresh();
-    } catch (e: any) { setErr(e.message); } finally { setBusy(false); }
+  function submit() {
+    setErr(null);
+    startTransition(async () => {
+      try {
+        await createChannelAction({
+          niche_id: f.niche_id, platform: f.platform, handle: f.handle,
+          target_rpm_usd: f.target_rpm_usd ? Number(f.target_rpm_usd) : null,
+          oauth_token_ref: f.oauth_token_ref || null,
+          ig_user_id: f.ig_user_id || null,
+        });
+        setOpen(false); setF({ ...f, handle: "" });
+      } catch (e: any) { setErr(e?.message ?? "fout"); }
+    });
   }
 
   if (!open) {
