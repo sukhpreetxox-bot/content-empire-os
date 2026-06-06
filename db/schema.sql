@@ -64,6 +64,7 @@ create table if not exists niches (
   -- Voice: Kokoro is primary (kokoro_voice/speed); edge-tts is the fallback.
   kokoro_voice    text,                              -- e.g. 'am_michael'
   kokoro_speed    numeric(4,2) not null default 1.0,
+  image_style     text,                              -- per-niche AI image prompt style
   tts_voice       text not null default 'en-US-GuyNeural',  -- edge-tts fallback
   tts_rate        text not null default '+0%',
   tts_pitch       text not null default '+0Hz',

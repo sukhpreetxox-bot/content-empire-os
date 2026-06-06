@@ -15,14 +15,18 @@ export type StyleProps = {
   mood: Mood;
 };
 
+export type Word = { word: string; start: number; end: number }; // seconds
+
 export type NicheVideoProps = {
   template: string;          // e.g. "FinanceTemplate" (informational)
   style: StyleProps;
   title: string;
   hook: string;
   scriptLines: string[];     // narration split into caption lines
-  audioSrc?: string | null;  // file path / URL of the edge-tts voiceover
+  audioSrc?: string | null;  // file path / URL of the voiceover
   bgVideo?: string | null;   // optional B-roll (staticFile path or URL)
+  bgImages?: string[] | null;// AI scene images (preferred); cycled w/ Ken Burns
+  words?: Word[] | null;     // Whisper word-level timings → exact karaoke
 };
 
 export const DEFAULT_STYLE: StyleProps = {

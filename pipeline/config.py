@@ -34,8 +34,12 @@ GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3")
 
-# --- B-roll -----------------------------------------------------------------
+# --- Visuals: Pollinations AI images (primary) + Pexels (fallback) ----------
 PEXELS_API_KEY = os.getenv("PEXELS_API_KEY", "")
+# Optional free token from enter.pollinations.ai → higher rate (1 req/5s) and
+# reliable access. Without it the keyless tier is heavily throttled/gated.
+POLLINATIONS_TOKEN = os.getenv("POLLINATIONS_TOKEN", "")
+POLLINATIONS_MODEL = os.getenv("POLLINATIONS_MODEL", "flux")
 
 # --- YouTube / Instagram ----------------------------------------------------
 YOUTUBE_OAUTH_DIR = Path(os.getenv("YOUTUBE_OAUTH_DIR", ROOT / "secrets/youtube"))

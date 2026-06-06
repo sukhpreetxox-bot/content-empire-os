@@ -18,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from config import VOICE_DIR, VIDEO_DIR, THUMB_DIR, BROLL_DIR
 from helpers import db, llm, editorial, tts, pexels, ffmpeg, storage, audio
+from helpers import pollinations, transcribe, trends
 from helpers import remotion as remotion_helper
 
 # Output language for scripts/titles. Niche tones are written in Dutch, which
@@ -32,8 +33,9 @@ SCRIPT_SYS = (
 )
 
 
-def build_prompt(niche: dict, fmt: str = "long") -> str:
-    topic = random.choice(niche.get("topics") or ["an interesting idea in this niche"])
+def build_prompt(niche: dict, fmt: str = "long", topic: str | None = None) -> str:
+    topic = topic or random.choice(
+        niche.get("topics") or ["an interesting idea in this niche"])
     base = (
         f"Channel: {niche['display_name']} ({niche['category']}).\n"
         f"Tone: {niche['tone']}. Audience: {niche.get('audience','general')}.\n"
@@ -70,30 +72,50 @@ def _caption_lines(script: str, max_lines: int = 7) -> list[str]:
 def render_video(niche: dict, title: str, hook: str, script: str,
                  audio: Path, slug: str, portrait: bool = False
                  ) -> tuple[Path, Path, list[dict]]:
-    """Branded Remotion render (preferred) with an FFmpeg B-roll fallback."""
+    """Render: AI scene images (primary) → Pexels b-roll (fallback), with
+    Whisper word-accurate captions; FFmpeg assembly as last resort."""
     orientation = "portrait" if portrait else "landscape"
+    w, h = (1080, 1920) if portrait else (1920, 1080)
     video_path = VIDEO_DIR / f"{slug}.mp4"
     duration = ffmpeg.probe_duration(audio)
+    lines = _caption_lines(script)
+    credits: list[dict] = []
 
-    # Optional B-roll behind the branded template (and for the fallback).
-    query = random.choice(niche.get("topics") or [niche["category"]])
-    try:
-        clips, credits = pexels.fetch_broll(
-            query, BROLL_DIR / slug, count=3, orientation=orientation)
-    except Exception as e:  # noqa: BLE001 — B-roll is optional
-        print(f"[gen] no B-roll ({e}); rendering on solid background")
-        clips, credits = [], []
+    # 1. PRIMARY visuals: one unique AI image per script beat (per-niche style).
+    bg_images: list[Path] = []
+    if pollinations.available():
+        try:
+            bg_images = pollinations.generate_scene_images(
+                lines, BROLL_DIR / slug, niche.get("image_style") or niche["category"],
+                width=w, height=h)
+            if bg_images:
+                credits = [{"source": "Pollinations AI", "model": "flux"}]
+        except Exception as e:  # noqa: BLE001
+            print(f"[gen] AI images failed ({e})")
+
+    # 2. FALLBACK visuals: Pexels b-roll if no AI images.
+    clips: list[Path] = []
+    if not bg_images:
+        try:
+            query = random.choice(niche.get("topics") or [niche["category"]])
+            clips, credits = pexels.fetch_broll(
+                query, BROLL_DIR / slug, count=3, orientation=orientation)
+        except Exception as e:  # noqa: BLE001
+            print(f"[gen] no B-roll ({e}); solid background")
+
+    # 3. Whisper word-level timings for frame-accurate karaoke captions.
+    words = transcribe.word_timestamps(audio)
 
     try:
         remotion_helper.render(
-            niche, title, hook, _caption_lines(script), audio, video_path,
+            niche, title, hook, lines, audio, video_path,
             duration_seconds=duration, portrait=portrait,
-            bg_video=clips[0] if clips else None)
-    except Exception as e:  # noqa: BLE001 — fall back to plain FFmpeg assembly
+            bg_video=clips[0] if clips else None,
+            bg_images=bg_images or None, words=words or None)
+    except Exception as e:  # noqa: BLE001 — last-resort FFmpeg assembly
         print(f"[gen] Remotion render failed ({e}); FFmpeg fallback")
         if not clips:
             raise
-        w, h = (1080, 1920) if portrait else (1920, 1080)
         ffmpeg.concat_broll(clips, audio, video_path, width=w, height=h)
 
     thumb_path = THUMB_DIR / f"{slug}.jpg"
@@ -107,8 +129,10 @@ def generate_for_channel(channel: dict, fmt: str = "long") -> None:
     print(f"[gen] {handle} ({niche['slug']}) [{fmt}] ...")
     portrait = fmt == "short" or niche["platform"] == "instagram"
 
-    # 1. idea + script
-    draft = llm.generate_json(build_prompt(niche, fmt), system=SCRIPT_SYS)
+    # 1. idea + script — topic chosen from real YouTube search demand
+    topic = trends.pick_topic(niche)
+    print(f"[gen] topic: {topic}")
+    draft = llm.generate_json(build_prompt(niche, fmt, topic), system=SCRIPT_SYS)
     row = db.create_content(
         channel["id"], status="script", format=fmt,
         title=draft.get("title"), hook=draft.get("hook"),

@@ -8,6 +8,7 @@ import { Decor } from "./components/Decor";
 import { Captions } from "./components/Captions";
 import { FilmGrain } from "./components/FilmGrain";
 import { Vignette } from "./components/Vignette";
+import { SceneImages } from "./components/SceneImages";
 
 const resolveSrc = (src: string) =>
   /^https?:\/\//.test(src) ? src : staticFile(src);
@@ -32,7 +33,7 @@ const KenBurns: React.FC<{ src: string }> = ({ src }) => {
 };
 
 export const NicheVideo: React.FC<NicheVideoProps> = ({
-  style, title, hook, scriptLines, audioSrc, bgVideo,
+  style, title, hook, scriptLines, audioSrc, bgVideo, bgImages, words,
 }) => {
   const { fps, width, durationInFrames } = useVideoConfig();
   const frame = useCurrentFrame();
@@ -49,8 +50,10 @@ export const NicheVideo: React.FC<NicheVideoProps> = ({
 
   return (
     <AbsoluteFill style={{ backgroundColor: style.bg }}>
-      {/* Background: Ken Burns b-roll, or mood decor on solid colour */}
-      {bgVideo ? <KenBurns src={bgVideo} /> : null}
+      {/* Background: AI scene images (preferred) → b-roll → mood decor */}
+      {bgImages && bgImages.length
+        ? <SceneImages images={bgImages} />
+        : bgVideo ? <KenBurns src={bgVideo} /> : null}
       <Decor style={style} />
       <Vignette strength={style.mood === "eerie" ? 0.7 : 0.5} />
 
@@ -79,7 +82,7 @@ export const NicheVideo: React.FC<NicheVideoProps> = ({
 
       {/* Word-by-word captions (lower third) */}
       <Sequence from={Math.round(fps * 1.6)}>
-        <Captions lines={scriptLines} style={style} />
+        <Captions lines={scriptLines} style={style} words={words} startSec={1.6} />
       </Sequence>
 
       {/* Progress bar */}

@@ -24,7 +24,9 @@ def _public_dir() -> Path:
 
 def render(niche: dict, title: str, hook: str, script_lines: list[str],
            audio_path: Path, out_path: Path, duration_seconds: float,
-           portrait: bool, bg_video: Path | None = None) -> Path:
+           portrait: bool, bg_video: Path | None = None,
+           bg_images: list[Path] | None = None,
+           words: list[dict] | None = None) -> Path:
     pub = _public_dir()
     audio_name = f"{out_path.stem}.mp3"
     shutil.copy(audio_path, pub / audio_name)
@@ -33,6 +35,12 @@ def render(niche: dict, title: str, hook: str, script_lines: list[str],
     if bg_video:
         bg_name = f"{out_path.stem}_bg{Path(bg_video).suffix}"
         shutil.copy(bg_video, pub / bg_name)
+
+    bg_image_names = []
+    for i, img in enumerate(bg_images or []):
+        name = f"{out_path.stem}_img{i}{Path(img).suffix}"
+        shutil.copy(img, pub / name)
+        bg_image_names.append(name)
 
     style = niche.get("style_props") or {}
     props = {
@@ -48,6 +56,8 @@ def render(niche: dict, title: str, hook: str, script_lines: list[str],
         "scriptLines": script_lines,
         "audioSrc": audio_name,
         "bgVideo": bg_name,
+        "bgImages": bg_image_names or None,
+        "words": words or None,
         "durationInFrames": max(int(duration_seconds * FPS), FPS * 3),
     }
 

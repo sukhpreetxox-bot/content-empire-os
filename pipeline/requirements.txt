@@ -11,3 +11,5 @@ google-api-python-client>=2.130   # YouTube Data API v3
 google-auth-oauthlib>=1.2          # YouTube OAuth
 google-auth-httplib2>=0.2
 # ffmpeg is a system binary (installed on the VM), not a pip package.
+faster-whisper>=1.0     # word-level caption timestamps (CPU)
+Pillow>=10.0            # logo rendering
