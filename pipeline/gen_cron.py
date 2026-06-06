@@ -17,7 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from config import VOICE_DIR, VIDEO_DIR, THUMB_DIR, BROLL_DIR
-from helpers import db, llm, editorial, tts, pexels, ffmpeg, storage
+from helpers import db, llm, editorial, tts, pexels, ffmpeg, storage, audio
 from helpers import remotion as remotion_helper
 
 # Output language for scripts/titles. Niche tones are written in Dutch, which
@@ -115,14 +115,23 @@ def generate_for_channel(channel: dict) -> None:
     db.update_content(cid, script=result.script, editorial_passed=True,
                       editorial_notes=result.notes)
 
-    # 3. voiceover
-    audio = tts.synthesize_for_niche(result.script, VOICE_DIR / f"{slug}.mp3", niche)
-    db.update_content(cid, status="voice", voiceover_path=str(audio))
+    # 3. voiceover (Kokoro) → master → optional background music
+    raw_voice = tts.synthesize_for_niche(result.script, VOICE_DIR / f"{slug}_raw.mp3", niche)
+    final_audio = audio.master(raw_voice, VOICE_DIR / f"{slug}.mp3")
+    mood = (niche.get("style_props") or {}).get("mood", "calm")
+    track = audio.pick_music(mood)
+    if track:
+        try:
+            final_audio = audio.mix_with_music(
+                final_audio, track, VOICE_DIR / f"{slug}_mixed.mp3")
+        except Exception as e:  # noqa: BLE001 — music is optional
+            print(f"[gen] music mix failed ({e}); voice-only")
+    db.update_content(cid, status="voice", voiceover_path=str(final_audio))
 
     # 4. video + thumbnail
     video, thumb, credits = render_video(
         niche, draft.get("title") or niche["display_name"],
-        draft.get("hook") or "", result.script, audio, slug)
+        draft.get("hook") or "", result.script, final_audio, slug)
 
     # 4b. persist media to Supabase Storage so a later (ephemeral) publish
     #     runner can fetch it; also gives IG its required public URL.
