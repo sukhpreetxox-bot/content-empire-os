@@ -9,8 +9,26 @@ import re
 import requests
 
 from config import (
-    GROQ_API_KEY, GROQ_MODEL, OLLAMA_HOST, OLLAMA_MODEL,
+    GEMINI_API_KEY, GEMINI_MODEL, GROQ_API_KEY, GROQ_MODEL,
+    OLLAMA_HOST, OLLAMA_MODEL,
 )
+
+
+def _has(key: str) -> bool:
+    return bool(key) and not key.startswith("YOUR_")
+
+
+def _gemini(system: str, prompt: str, temperature: float) -> str:
+    from google import genai  # google-genai SDK
+    from google.genai import types
+    client = genai.Client(api_key=GEMINI_API_KEY)
+    resp = client.models.generate_content(
+        model=GEMINI_MODEL,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            system_instruction=system or None, temperature=temperature),
+    )
+    return resp.text or ""
 
 
 def _groq(system: str, prompt: str, temperature: float) -> str:
@@ -46,11 +64,16 @@ def _ollama(system: str, prompt: str, temperature: float) -> str:
 
 
 def generate(prompt: str, system: str = "", temperature: float = 0.8) -> str:
-    """Try Groq first; on any failure fall back to local Ollama."""
-    if GROQ_API_KEY and not GROQ_API_KEY.startswith("YOUR_"):
+    """Provider cascade: Gemini (quality) → Groq (speed) → Ollama (local)."""
+    if _has(GEMINI_API_KEY):
+        try:
+            return _gemini(system, prompt, temperature)
+        except Exception as e:  # noqa: BLE001
+            print(f"[llm] Gemini failed ({e}); trying Groq")
+    if _has(GROQ_API_KEY):
         try:
             return _groq(system, prompt, temperature)
-        except Exception as e:  # noqa: BLE001 — fall through to Ollama
+        except Exception as e:  # noqa: BLE001
             print(f"[llm] Groq failed ({e}); falling back to Ollama")
     return _ollama(system, prompt, temperature)
 
