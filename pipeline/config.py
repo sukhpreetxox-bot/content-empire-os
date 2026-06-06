@@ -59,3 +59,6 @@ YT_MAX_UPLOADS_PER_DAY = 5
 IG_MAX_POSTS_PER_DAY = 10
 # Seconds to wait between uploads (throttle / spread load).
 UPLOAD_THROTTLE_SECONDS = 30
+# Default YouTube privacy for auto-published, approved videos.
+# Start "unlisted" while tuning; flip to "public" via env when confident.
+PUBLISH_PRIVACY = os.getenv("PUBLISH_PRIVACY", "unlisted")  # unlisted|public|private

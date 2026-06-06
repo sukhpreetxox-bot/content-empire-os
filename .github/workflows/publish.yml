@@ -21,6 +21,8 @@ jobs:
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       IG_APP_ID: ${{ secrets.IG_APP_ID }}
       IG_APP_SECRET: ${{ secrets.IG_APP_SECRET }}
+      # Start unlisted while tuning; change to "public" here when confident.
+      PUBLISH_PRIVACY: unlisted
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

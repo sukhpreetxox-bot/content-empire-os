@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from config import (
     YT_MAX_UPLOADS_PER_DAY, IG_MAX_POSTS_PER_DAY, UPLOAD_THROTTLE_SECONDS,
-    VIDEO_DIR,
+    VIDEO_DIR, PUBLISH_PRIVACY,
 )
 from helpers import db, youtube, instagram, storage
 
@@ -75,6 +75,7 @@ def publish_one(content: dict) -> None:
             channel, _local_video(content), title=title, description=desc,
             tags=(niche.get("topics") or [])[:10],
             synthetic=content.get("synthetic_disclosure", True),
+            privacy=PUBLISH_PRIVACY,
         )
         url = f"https://youtube.com/watch?v={vid}"
     else:

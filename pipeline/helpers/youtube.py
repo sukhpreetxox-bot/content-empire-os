@@ -50,7 +50,7 @@ def _credentials(token_ref: str, client_secret_file: str) -> Credentials:
 
 def upload(channel: dict, video_path: Path, title: str, description: str,
            tags: list[str] | None = None, synthetic: bool = True,
-           privacy: str = "public", made_for_kids: bool = False) -> str:
+           privacy: str = "unlisted", made_for_kids: bool = False) -> str:
     """Upload a video for `channel`. Returns the YouTube video id."""
     token_ref = channel.get("oauth_token_ref")
     if not token_ref:
