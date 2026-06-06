@@ -139,6 +139,19 @@ on conflict (slug) do update set
   updated_at = now();
 
 -- ---------------------------------------------------------------------------
+-- Kokoro voice per niche (primary TTS). edge-tts fields stay as fallback.
+-- ---------------------------------------------------------------------------
+update niches set kokoro_voice = v.voice, kokoro_speed = v.speed
+from (values
+  ('quiet-capital','am_michael',0.95),('leverage-lab','am_adam',1.06),
+  ('plain-law','bm_george',0.98),('coherent','af_heart',0.92),
+  ('lights-off','am_onyx',0.85),('the-quiet-ascent','af_nicole',0.92),
+  ('the-primed-body','am_michael',1.00),('build-quiet-brands','am_adam',1.05),
+  ('the-attachment-lab','af_bella',0.95),('quiet-cashflow','am_adam',1.08)
+) as v(slug, voice, speed)
+where niches.slug = v.slug;
+
+-- ---------------------------------------------------------------------------
 -- CHANNELS  --  one starter channel per niche (handle = niche display_name).
 --   Credentials are left null; fill them via the dashboard form after you
 --   create the GCP projects / IG Business accounts.

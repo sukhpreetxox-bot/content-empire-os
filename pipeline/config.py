@@ -42,6 +42,11 @@ IG_APP_SECRET = os.getenv("IG_APP_SECRET", "")
 IG_TOKEN_DIR = Path(os.getenv("IG_TOKEN_DIR", ROOT / "secrets/instagram"))
 IG_GRAPH_VERSION = os.getenv("IG_GRAPH_VERSION", "v21.0")
 
+# --- Voice: Kokoro (primary, free, high quality); edge-tts is the fallback --
+MODELS_DIR = Path(os.getenv("MODELS_DIR", ROOT / "models"))
+KOKORO_MODEL = MODELS_DIR / "kokoro-v1.0.onnx"
+KOKORO_VOICES = MODELS_DIR / "voices-v1.0.bin"
+
 # --- Paths ------------------------------------------------------------------
 ASSETS_DIR = Path(os.getenv("ASSETS_DIR", ROOT / "assets"))
 REMOTION_DIR = Path(os.getenv("REMOTION_DIR", ROOT / "remotion"))

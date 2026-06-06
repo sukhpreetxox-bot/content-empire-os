@@ -61,9 +61,11 @@ create table if not exists niches (
   tone            text not null,                     -- 'kalme autoritaire stem'
   audience        text,                              -- target audience description
   visual_style    text,                              -- 'Donker navy + goud, animated charts'
-  -- Voice (edge-tts)
-  tts_voice       text not null default 'en-US-GuyNeural',
-  tts_rate        text not null default '+0%',       -- edge-tts rate string
+  -- Voice: Kokoro is primary (kokoro_voice/speed); edge-tts is the fallback.
+  kokoro_voice    text,                              -- e.g. 'am_michael'
+  kokoro_speed    numeric(4,2) not null default 1.0,
+  tts_voice       text not null default 'en-US-GuyNeural',  -- edge-tts fallback
+  tts_rate        text not null default '+0%',
   tts_pitch       text not null default '+0Hz',
   -- Remotion: which visual template + a free-form props blob (colors, fonts...)
   remotion_template text not null default 'GenericTemplate',

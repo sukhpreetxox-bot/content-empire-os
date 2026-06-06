@@ -35,3 +35,6 @@ dist/
 
 # Vercel
 .vercel/
+
+# Large model files (downloaded at runtime / in CI)
+models/
