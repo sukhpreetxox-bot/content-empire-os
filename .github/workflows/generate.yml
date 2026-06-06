@@ -11,6 +11,10 @@ on:
         description: "Limit to one platform (youtube/instagram) or leave blank for all"
         required: false
         default: ""
+      format:
+        description: "long or short (YouTube Shorts)"
+        required: false
+        default: "long"
 
 concurrency:
   group: generate

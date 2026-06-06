@@ -60,8 +60,9 @@ def _llm_judge(niche: dict, draft: dict) -> tuple[bool, str]:
         return False, f"judge error ({e}) — blocked for safety"
 
 
-def check(niche: dict, draft: dict) -> EditorialResult:
-    """Run all gates. `draft` has keys: title, hook, angle, script."""
+def check(niche: dict, draft: dict, min_words: int = MIN_SCRIPT_WORDS) -> EditorialResult:
+    """Run all gates. `draft` has keys: title, hook, angle, script.
+    min_words is lower for Shorts (passed by the caller)."""
     script = (draft.get("script") or "").strip()
     angle = (draft.get("angle") or "").strip()
     reasons: list[str] = []
@@ -71,8 +72,8 @@ def check(niche: dict, draft: dict) -> EditorialResult:
         reasons.append("missing/weak editorial angle")
 
     # 1b. minimum substance
-    if len(script.split()) < MIN_SCRIPT_WORDS:
-        reasons.append(f"script too short (<{MIN_SCRIPT_WORDS} words)")
+    if len(script.split()) < min_words:
+        reasons.append(f"script too short (<{min_words} words)")
 
     # 1c. banned framings (per niche)
     banned = niche.get("banned_framings") or []

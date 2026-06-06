@@ -32,17 +32,29 @@ SCRIPT_SYS = (
 )
 
 
-def build_prompt(niche: dict) -> str:
+def build_prompt(niche: dict, fmt: str = "long") -> str:
     topic = random.choice(niche.get("topics") or ["an interesting idea in this niche"])
-    return (
+    base = (
         f"Channel: {niche['display_name']} ({niche['category']}).\n"
         f"Tone: {niche['tone']}. Audience: {niche.get('audience','general')}.\n"
         f"Topic to cover: {topic}.\n\n"
         f"Write the title AND script entirely in {SCRIPT_LANGUAGE}.\n"
+    )
+    if fmt == "short":
+        return base + (
+            "Write a YOUTUBE SHORT script: 30-50 seconds, ~90-120 words. ONE "
+            "single sharp idea. Open with a curiosity-gap HOOK in the first "
+            "sentence that makes someone STOP scrolling. Punchy, fast, "
+            "conversational; end on a loop or a one-line takeaway. Must carry a "
+            "unique angle, not a bare fact.\n"
+            'Return JSON: {"title": "<=60 chars, curiosity-driven", '
+            '"hook": "<=8 words, the first line", "angle": "<unique POV>", '
+            '"script": "<90-120 words>"}'
+        )
+    return base + (
         "Write a 60-90 second narration script. REQUIRED: at least 170 words "
-        "(scripts under 120 words are auto-rejected, so aim for 170-220). It "
-        "must carry a UNIQUE angle, analysis, or transformation — not a bare "
-        "list of facts.\n"
+        "(aim for 170-220). It must carry a UNIQUE angle, analysis, or "
+        "transformation — not a bare list of facts.\n"
         'Return JSON: {"title": "...", "hook": "<3s opening line>", '
         '"angle": "<the unique POV in one sentence>", "script": "<full narration, 170+ words>"}'
     )
@@ -56,9 +68,9 @@ def _caption_lines(script: str, max_lines: int = 7) -> list[str]:
 
 
 def render_video(niche: dict, title: str, hook: str, script: str,
-                 audio: Path, slug: str) -> tuple[Path, Path, list[dict]]:
+                 audio: Path, slug: str, portrait: bool = False
+                 ) -> tuple[Path, Path, list[dict]]:
     """Branded Remotion render (preferred) with an FFmpeg B-roll fallback."""
-    portrait = niche["platform"] == "instagram"
     orientation = "portrait" if portrait else "landscape"
     video_path = VIDEO_DIR / f"{slug}.mp4"
     duration = ffmpeg.probe_duration(audio)
@@ -89,24 +101,25 @@ def render_video(niche: dict, title: str, hook: str, script: str,
     return video_path, thumb_path, credits
 
 
-def generate_for_channel(channel: dict) -> None:
+def generate_for_channel(channel: dict, fmt: str = "long") -> None:
     niche = channel["niches"]
     handle = channel["handle"]
-    print(f"[gen] {handle} ({niche['slug']}) ...")
+    print(f"[gen] {handle} ({niche['slug']}) [{fmt}] ...")
+    portrait = fmt == "short" or niche["platform"] == "instagram"
 
     # 1. idea + script
-    draft = llm.generate_json(build_prompt(niche), system=SCRIPT_SYS)
+    draft = llm.generate_json(build_prompt(niche, fmt), system=SCRIPT_SYS)
     row = db.create_content(
-        channel["id"], status="script",
+        channel["id"], status="script", format=fmt,
         title=draft.get("title"), hook=draft.get("hook"),
         topic=draft.get("title"), editorial_angle=draft.get("angle"),
         script=draft.get("script"),
     )
     cid = row["id"]
-    slug = f"{niche['slug']}_{cid[:8]}"
+    slug = f"{niche['slug']}_{fmt}_{cid[:8]}"
 
-    # 2. editorial-value gate
-    result = editorial.check(niche, draft)
+    # 2. editorial-value gate (lower length bar for Shorts)
+    result = editorial.check(niche, draft, min_words=70 if fmt == "short" else 120)
     if not result.passed:
         db.update_content(cid, status="rejected", editorial_passed=False,
                           editorial_notes=result.notes, reject_reason="editorial gate")
@@ -131,7 +144,7 @@ def generate_for_channel(channel: dict) -> None:
     # 4. video + thumbnail
     video, thumb, credits = render_video(
         niche, draft.get("title") or niche["display_name"],
-        draft.get("hook") or "", result.script, final_audio, slug)
+        draft.get("hook") or "", result.script, final_audio, slug, portrait=portrait)
 
     # 4b. persist media to Supabase Storage so a later (ephemeral) publish
     #     runner can fetch it; also gives IG its required public URL.
@@ -153,13 +166,14 @@ def generate_for_channel(channel: dict) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--platform", choices=["youtube", "instagram"])
+    ap.add_argument("--format", choices=["long", "short"], default="long")
     args = ap.parse_args()
 
     channels = db.get_active_channels(args.platform)
-    print(f"[gen] {len(channels)} active channel(s)")
+    print(f"[gen] {len(channels)} active channel(s) — format={args.format}")
     for ch in channels:
         try:
-            generate_for_channel(ch)
+            generate_for_channel(ch, fmt=args.format)
         except Exception:  # noqa: BLE001 — one channel failing must not stop the rest
             print(f"[gen] ERROR on {ch.get('handle')}:\n{traceback.format_exc()}")
 

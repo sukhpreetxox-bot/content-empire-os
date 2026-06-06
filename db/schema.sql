@@ -124,6 +124,7 @@ create table if not exists content (
   id              uuid primary key default gen_random_uuid(),
   channel_id      uuid not null references channels(id) on delete cascade,
   status          content_status_t not null default 'idea',
+  format          text not null default 'long',      -- 'long' (16:9) | 'short' (9:16)
   -- Generated artefacts
   title           text,
   hook            text,                              -- opening line / hook
