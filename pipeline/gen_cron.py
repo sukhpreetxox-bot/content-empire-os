@@ -17,7 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from config import VOICE_DIR, VIDEO_DIR, THUMB_DIR, BROLL_DIR
-from helpers import db, llm, editorial, tts, pexels, ffmpeg
+from helpers import db, llm, editorial, tts, pexels, ffmpeg, storage
 from helpers import remotion as remotion_helper
 
 # Output language for scripts/titles. Niche tones are written in Dutch, which
@@ -123,8 +123,18 @@ def generate_for_channel(channel: dict) -> None:
     video, thumb, credits = render_video(
         niche, draft.get("title") or niche["display_name"],
         draft.get("hook") or "", result.script, audio, slug)
+
+    # 4b. persist media to Supabase Storage so a later (ephemeral) publish
+    #     runner can fetch it; also gives IG its required public URL.
+    meta: dict = {}
+    try:
+        meta["public_video_url"] = storage.upload(video, f"{slug}/video.mp4")
+        meta["thumbnail_url"] = storage.upload(thumb, f"{slug}/thumb.jpg")
+    except Exception as e:  # noqa: BLE001 — local runs can still work off disk
+        print(f"[gen] storage upload failed ({e}); keeping local paths only")
+
     db.update_content(cid, status="video", video_path=str(video),
-                      thumbnail_path=str(thumb), broll_credits=credits)
+                      thumbnail_path=str(thumb), broll_credits=credits, meta=meta)
 
     # 5. ready for human review
     db.update_content(cid, status="review")

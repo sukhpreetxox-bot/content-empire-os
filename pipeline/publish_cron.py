@@ -15,8 +15,22 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from config import (
     YT_MAX_UPLOADS_PER_DAY, IG_MAX_POSTS_PER_DAY, UPLOAD_THROTTLE_SECONDS,
+    VIDEO_DIR,
 )
-from helpers import db, youtube, instagram
+from helpers import db, youtube, instagram, storage
+
+
+def _local_video(content: dict) -> Path:
+    """Return a local video path: use the on-disk file if present (same-runner
+    case), else download it from Supabase Storage (ephemeral-runner case)."""
+    vp = content.get("video_path")
+    if vp and Path(vp).exists():
+        return Path(vp)
+    url = (content.get("meta") or {}).get("public_video_url")
+    if not url:
+        raise RuntimeError("no local video and no meta.public_video_url to fetch")
+    dest = VIDEO_DIR / f"{content['id']}.mp4"
+    return storage.download(url, dest)
 
 
 def _description(content: dict, niche: dict) -> str:
@@ -58,14 +72,14 @@ def publish_one(content: dict) -> None:
 
     if platform == "youtube":
         vid = youtube.upload(
-            channel, Path(content["video_path"]), title=title, description=desc,
+            channel, _local_video(content), title=title, description=desc,
             tags=(niche.get("topics") or [])[:10],
             synthetic=content.get("synthetic_disclosure", True),
         )
         url = f"https://youtube.com/watch?v={vid}"
     else:
-        # IG needs a public HTTPS URL; meta.public_video_url is set when the
-        # asset is uploaded to Supabase Storage / a temp public host.
+        # IG needs a public HTTPS URL; meta.public_video_url is set by the
+        # generation step when the asset is uploaded to Supabase Storage.
         public_url = content.get("meta", {}).get("public_video_url")
         if not public_url:
             raise RuntimeError("no public_video_url in content.meta for IG upload")
