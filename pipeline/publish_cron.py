@@ -37,6 +37,9 @@ def _description(content: dict, niche: dict) -> str:
     parts = [content.get("hook") or "", "", content.get("editorial_angle") or ""]
     for d in (niche.get("required_disclaimers") or []):
         parts += ["", d]
+    credit = (content.get("meta") or {}).get("music_credit")
+    if credit:
+        parts += ["", credit]
     return "\n".join(p for p in parts if p is not None).strip()
 
 

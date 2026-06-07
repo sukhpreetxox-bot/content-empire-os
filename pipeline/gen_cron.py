@@ -157,10 +157,12 @@ def generate_for_channel(channel: dict, fmt: str = "long") -> None:
     final_audio = audio.master(raw_voice, VOICE_DIR / f"{slug}.mp3")
     mood = (niche.get("style_props") or {}).get("mood", "calm")
     track = audio.pick_music(mood)
+    music_credit = None
     if track:
         try:
             final_audio = audio.mix_with_music(
                 final_audio, track, VOICE_DIR / f"{slug}_mixed.mp3")
+            music_credit = audio.MUSIC_CREDIT
         except Exception as e:  # noqa: BLE001 — music is optional
             print(f"[gen] music mix failed ({e}); voice-only")
     db.update_content(cid, status="voice", voiceover_path=str(final_audio))
@@ -173,6 +175,8 @@ def generate_for_channel(channel: dict, fmt: str = "long") -> None:
     # 4b. persist media to Supabase Storage so a later (ephemeral) publish
     #     runner can fetch it; also gives IG its required public URL.
     meta: dict = {}
+    if music_credit:
+        meta["music_credit"] = music_credit
     try:
         meta["public_video_url"] = storage.upload(video, f"{slug}/video.mp4")
         meta["thumbnail_url"] = storage.upload(thumb, f"{slug}/thumb.jpg")

@@ -16,6 +16,10 @@ from config import ASSETS_DIR
 MUSIC_DIR = ASSETS_DIR / "music"
 AUDIO_EXTS = {".mp3", ".wav", ".m4a", ".ogg", ".flac"}
 
+# Background tracks are Kevin MacLeod / incompetech.com (CC BY 4.0). When a track
+# is used, this credit is appended to the video description at publish time.
+MUSIC_CREDIT = "Music: Kevin MacLeod (incompetech.com) — licensed under CC BY 4.0"
+
 
 def _run(args: list[str]) -> None:
     subprocess.run(args, check=True, capture_output=True)

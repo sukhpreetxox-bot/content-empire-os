@@ -60,6 +60,8 @@ jobs:
           key: whisper-base-en
       - name: Install Python deps
         run: pip install -r pipeline/requirements.txt
+      - name: Fetch royalty-free music (CC BY, cached)
+        run: python pipeline/tools/fetch_music.py || true
       - name: Install Remotion deps
         run: npm ci --prefix remotion || npm install --prefix remotion
       - name: Generate
