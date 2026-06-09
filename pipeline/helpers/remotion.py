@@ -69,7 +69,8 @@ def render(niche: dict, title: str, hook: str, script_lines: list[str],
 
     subprocess.run(
         ["npx", "remotion", "render", composition, str(out_path),
-         f"--props={props_file}", "--timeout=90000", "--concurrency=2"],
+         f"--props={props_file}", "--timeout=90000", "--concurrency=2",
+         "--crf=26"],   # smaller files (stay under Supabase free 50MB/object)
         cwd=str(REMOTION_DIR), check=True,
     )
     return out_path

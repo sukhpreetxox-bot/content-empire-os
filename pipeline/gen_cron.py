@@ -182,8 +182,12 @@ def generate_for_channel(channel: dict, fmt: str = "long") -> None:
     meta: dict = {}
     if music_credit:
         meta["music_credit"] = music_credit
+    # Stay under Supabase free-tier 50MB/object: shrink if needed before upload.
+    upload_src = video
+    if video.stat().st_size > 48 * 1024 * 1024:
+        upload_src = ffmpeg.shrink(video, VIDEO_DIR / f"{slug}_web.mp4")
     try:
-        meta["public_video_url"] = storage.upload(video, f"{slug}/video.mp4")
+        meta["public_video_url"] = storage.upload(upload_src, f"{slug}/video.mp4")
         meta["thumbnail_url"] = storage.upload(thumb, f"{slug}/thumb.jpg")
     except Exception as e:  # noqa: BLE001 — local runs can still work off disk
         print(f"[gen] storage upload failed ({e}); keeping local paths only")

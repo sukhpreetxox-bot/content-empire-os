@@ -65,6 +65,15 @@ def concat_broll(clips: list[Path], audio: Path, out: Path,
     return out
 
 
+def shrink(video: Path, out: Path, crf: int = 28) -> Path:
+    """Re-encode smaller (web-friendly) to stay under storage size limits."""
+    out = Path(out)
+    _run(["ffmpeg", "-y", "-i", str(video), "-c:v", "libx264", "-crf", str(crf),
+          "-preset", "veryfast", "-c:a", "aac", "-b:a", "128k",
+          "-movflags", "+faststart", str(out)])
+    return out
+
+
 def thumbnail(video: Path, out: Path, at_seconds: float = 1.0) -> Path:
     """Grab a single frame as the thumbnail (Remotion @still is preferred)."""
     out = Path(out)
