@@ -19,3 +19,15 @@ export async function createChannelAction(input: m.NewChannel) {
   revalidatePath("/");
   return r;
 }
+
+export async function createIdeaAction(text: string, channelId?: string | null) {
+  const r = await m.createIdea(text, channelId);
+  revalidatePath("/ideas");
+  revalidatePath("/");
+  return r;
+}
+
+export async function dismissIdeaAction(id: string) {
+  await m.setIdeaStatus(id, "dismissed");
+  revalidatePath("/ideas");
+}

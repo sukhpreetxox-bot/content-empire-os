@@ -30,6 +30,22 @@ export async function decideContent(
   return data;
 }
 
+export async function createIdea(text: string, channelId?: string | null) {
+  const clean = (text || "").trim();
+  if (!clean) throw new Error("idea text required");
+  const { data, error } = await supabaseAdmin()
+    .from("ideas").insert({ text: clean, channel_id: channelId ?? null })
+    .select("*").single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function setIdeaStatus(id: string, status: "new" | "dismissed") {
+  const { error } = await supabaseAdmin()
+    .from("ideas").update({ status }).eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
 export interface NewChannel {
   niche_id: string; platform: string; handle: string;
   target_rpm_usd?: number | null;

@@ -29,6 +29,11 @@ export interface Channel {
   ig_token_ref: string | null; niches?: Niche;
 }
 
+export interface Idea {
+  id: string; text: string; status: "new" | "used" | "dismissed";
+  channel_id: string | null; content_id: string | null; created_at: string;
+}
+
 export interface Content {
   id: string; channel_id: string; status: ContentStatus;
   title: string | null; hook: string | null; script: string | null;

@@ -105,6 +105,32 @@ def get_schedule(channel_id: str) -> dict | None:
     return (r.data or [None])[0]
 
 
+# --- Ideas inbox (your free-text input → topics) ----------------------------
+def create_idea(text: str, channel_id: str | None = None) -> dict:
+    return db().table("ideas").insert(
+        {"text": text, "channel_id": channel_id}).execute().data[0]
+
+
+def list_ideas(limit: int = 50) -> list[dict]:
+    return (db().table("ideas").select("*")
+            .order("created_at", desc=True).limit(limit).execute().data or [])
+
+
+def pop_idea(channel_id: str) -> dict | None:
+    """Take the oldest unused idea for this channel (or a global one) and mark
+    it used. Returns the idea, or None if the inbox is empty."""
+    rows = (db().table("ideas").select("*").eq("status", "new")
+            .or_(f"channel_id.eq.{channel_id},channel_id.is.null")
+            .order("created_at").limit(1).execute().data)
+    if not rows:
+        return None
+    idea = rows[0]
+    db().table("ideas").update(
+        {"status": "used", "used_at": datetime.now(timezone.utc).isoformat()}
+    ).eq("id", idea["id"]).execute()
+    return idea
+
+
 def touch_keepalive() -> None:
     """Cheap write to keep the Supabase free-tier project from pausing."""
     db().table("niches").update({"updated_at": datetime.now(timezone.utc).isoformat()}) \

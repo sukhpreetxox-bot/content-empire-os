@@ -213,6 +213,21 @@ create trigger trg_schedule_updated before update on publish_schedule
 create index if not exists idx_schedule_channel on publish_schedule(channel_id);
 
 -- ============================================================================
+-- IDEAS  --  your free-text inbox. The generator pops the oldest 'new' idea as
+--   the next video's topic (before falling back to trend research).
+-- ============================================================================
+create table if not exists ideas (
+  id          uuid primary key default gen_random_uuid(),
+  channel_id  uuid references channels(id) on delete set null,  -- null = any
+  text        text not null,
+  status      text not null default 'new',   -- new | used | dismissed
+  content_id  uuid references content(id) on delete set null,
+  created_at  timestamptz not null default now(),
+  used_at     timestamptz
+);
+create index if not exists idx_ideas_status on ideas(status, created_at);
+
+-- ============================================================================
 -- Convenience view: full kanban join for the dashboard.
 -- ============================================================================
 create or replace view v_content_board as
@@ -245,6 +260,7 @@ alter table channels          enable row level security;
 alter table content           enable row level security;
 alter table analytics         enable row level security;
 alter table publish_schedule  enable row level security;
+alter table ideas             enable row level security;
 
 -- View runs with the querying user's permissions (not the creator's).
 alter view v_content_board set (security_invoker = on);

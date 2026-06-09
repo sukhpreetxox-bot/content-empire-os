@@ -129,9 +129,14 @@ def generate_for_channel(channel: dict, fmt: str = "long") -> None:
     print(f"[gen] {handle} ({niche['slug']}) [{fmt}] ...")
     portrait = fmt == "short" or niche["platform"] == "instagram"
 
-    # 1. idea + script — topic chosen from real YouTube search demand
-    topic = trends.pick_topic(niche)
-    print(f"[gen] topic: {topic}")
+    # 1. idea + script — prefer YOUR submitted idea, else real search demand
+    idea = db.pop_idea(channel["id"])
+    if idea:
+        topic = idea["text"]
+        print(f"[gen] using your idea: {topic}")
+    else:
+        topic = trends.pick_topic(niche)
+        print(f"[gen] topic (trends): {topic}")
     draft = llm.generate_json(build_prompt(niche, fmt, topic), system=SCRIPT_SYS)
     row = db.create_content(
         channel["id"], status="script", format=fmt,
