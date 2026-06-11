@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from config import VOICE_DIR, VIDEO_DIR, THUMB_DIR, BROLL_DIR
 from helpers import db, llm, editorial, tts, pexels, ffmpeg, storage, audio
-from helpers import pollinations, transcribe, trends
+from helpers import transcribe, trends, images as ai_images
 from helpers import remotion as remotion_helper
 
 # Output language for scripts/titles. Niche tones are written in Dutch, which
@@ -27,9 +27,12 @@ from helpers import remotion as remotion_helper
 SCRIPT_LANGUAGE = "English"
 
 SCRIPT_SYS = (
-    "You are a faceless-channel scriptwriter. You write tight, original short-form "
-    "narration with a clear, specific point of view. You never produce generic "
-    "fact-recaps. Output strictly the requested JSON."
+    "You are a faceless-channel scriptwriter. You write tight, original narration "
+    "with a clear, specific point of view. You favour a counterintuitive, precise, "
+    "almost philosophical insight over generic advice — every script should make "
+    "the viewer feel they finally understood something they couldn't put into "
+    "words. No clichés, no listicles, no 'in today's world'. Output strictly the "
+    "requested JSON."
 )
 
 
@@ -82,16 +85,16 @@ def render_video(niche: dict, title: str, hook: str, script: str,
     credits: list[dict] = []
 
     # 1. PRIMARY visuals: one unique AI image per script beat (per-niche style).
+    #    Cloudflare Workers AI → Pollinations → (Pexels fallback below).
     bg_images: list[Path] = []
-    if pollinations.available():
-        try:
-            bg_images = pollinations.generate_scene_images(
-                lines, BROLL_DIR / slug, niche.get("image_style") or niche["category"],
-                width=w, height=h)
-            if bg_images:
-                credits = [{"source": "Pollinations AI", "model": "flux"}]
-        except Exception as e:  # noqa: BLE001
-            print(f"[gen] AI images failed ({e})")
+    try:
+        bg_images = ai_images.scene_images(
+            lines, BROLL_DIR / slug, niche.get("image_style") or niche["category"],
+            width=w, height=h)
+        if bg_images:
+            credits = [{"source": "AI (Cloudflare Workers AI / Pollinations FLUX)"}]
+    except Exception as e:  # noqa: BLE001
+        print(f"[gen] AI images failed ({e})")
 
     # 2. FALLBACK visuals: Pexels b-roll if no AI images.
     clips: list[Path] = []

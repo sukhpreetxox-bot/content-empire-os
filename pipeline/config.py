@@ -40,6 +40,10 @@ PEXELS_API_KEY = os.getenv("PEXELS_API_KEY", "")
 # reliable access. Without it the keyless tier is heavily throttled/gated.
 POLLINATIONS_TOKEN = os.getenv("POLLINATIONS_TOKEN", "")
 POLLINATIONS_MODEL = os.getenv("POLLINATIONS_MODEL", "flux")
+# Cloudflare Workers AI — reliable free FLUX (10k neurons/day), works from any
+# IP. Free account → dash.cloudflare.com (Account ID + an API token w/ Workers AI).
+CF_ACCOUNT_ID = os.getenv("CF_ACCOUNT_ID", "")
+CF_API_TOKEN = os.getenv("CF_API_TOKEN", "")
 
 # --- YouTube / Instagram ----------------------------------------------------
 YOUTUBE_OAUTH_DIR = Path(os.getenv("YOUTUBE_OAUTH_DIR", ROOT / "secrets/youtube"))
