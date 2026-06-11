@@ -16,16 +16,25 @@ from helpers.db import db
 BUCKET = "media"
 
 
-def upload(local_path: Path, dest_path: str) -> str:
-    """Upload a local file to the bucket and return its public URL."""
+def upload(local_path: Path, dest_path: str, retries: int = 3) -> str:
+    """Upload a local file to the bucket and return its public URL.
+    Retries transient network errors (Supabase occasionally drops the TLS conn)."""
+    import time
     local_path = Path(local_path)
     content_type = mimetypes.guess_type(str(local_path))[0] or "application/octet-stream"
-    with open(local_path, "rb") as f:
-        db().storage.from_(BUCKET).upload(
-            dest_path, f,
-            {"content-type": content_type, "upsert": "true"},
-        )
-    return public_url(dest_path)
+    last = None
+    for attempt in range(retries):
+        try:
+            with open(local_path, "rb") as f:
+                db().storage.from_(BUCKET).upload(
+                    dest_path, f,
+                    {"content-type": content_type, "upsert": "true"},
+                )
+            return public_url(dest_path)
+        except Exception as e:  # noqa: BLE001
+            last = e
+            time.sleep(2 * (attempt + 1))
+    raise RuntimeError(f"storage upload failed after {retries} tries: {last}")
 
 
 def public_url(dest_path: str) -> str:
