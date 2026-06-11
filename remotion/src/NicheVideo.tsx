@@ -9,6 +9,8 @@ import { Captions } from "./components/Captions";
 import { FilmGrain } from "./components/FilmGrain";
 import { Vignette } from "./components/Vignette";
 import { SceneImages } from "./components/SceneImages";
+import { Brand } from "./components/Brand";
+import { Outro } from "./components/Outro";
 
 const resolveSrc = (src: string) =>
   /^https?:\/\//.test(src) ? src : staticFile(src);
@@ -34,10 +36,13 @@ const KenBurns: React.FC<{ src: string }> = ({ src }) => {
 
 export const NicheVideo: React.FC<NicheVideoProps> = ({
   style, title, hook, scriptLines, audioSrc, bgVideo, bgImages, words,
+  variant = 0, closer,
 }) => {
   const { fps, width, durationInFrames } = useVideoConfig();
   const frame = useCurrentFrame();
   const portrait = width < 1200;
+  const v = ((variant % 3) + 3) % 3;
+  const titleTop = [portrait ? "11%" : "9%", portrait ? "14%" : "12%", portrait ? "9%" : "7%"][v];
 
   // Title: blur + scale in, then settles.
   const tIn = spring({ frame, fps, config: { damping: 200 }, durationInFrames: 24 });
@@ -59,7 +64,7 @@ export const NicheVideo: React.FC<NicheVideoProps> = ({
 
       {/* Title block (top) */}
       <div style={{
-        position: "absolute", top: portrait ? "11%" : "9%", left: 0, right: 0,
+        position: "absolute", top: titleTop, left: 0, right: 0,
         padding: "0 8%", textAlign: "center",
         opacity: tIn, transform: `translateY(${titleY}px)`,
         filter: `blur(${titleBlur}px)`,
@@ -82,7 +87,7 @@ export const NicheVideo: React.FC<NicheVideoProps> = ({
 
       {/* Word-by-word captions (lower third) */}
       <Sequence from={Math.round(fps * 1.6)}>
-        <Captions lines={scriptLines} style={style} words={words} startSec={1.6} />
+        <Captions lines={scriptLines} style={style} words={words} startSec={1.6} variant={v} />
       </Sequence>
 
       {/* Progress bar */}
@@ -91,6 +96,10 @@ export const NicheVideo: React.FC<NicheVideoProps> = ({
         <div style={{ height: "100%", width: `${progress * 100}%`,
           background: style.accent }} />
       </div>
+
+      <Brand accent={style.accent} font={style.font} portrait={portrait} />
+      <Outro accent={style.accent} bg={style.bg} font={style.font}
+        portrait={portrait} closer={closer ?? undefined} />
 
       <FilmGrain opacity={0.06} />
       {audioSrc ? <Audio src={resolveSrc(audioSrc)} /> : null}

@@ -9,11 +9,15 @@ const CHUNK = 5; // words shown at once when using real timings
 // back to evenly distributing `lines` across the duration.
 export const Captions: React.FC<{
   lines: string[]; style: StyleProps; words?: Word[] | null; startSec?: number;
-}> = ({ lines, style, words, startSec = 0 }) => {
+  variant?: number;
+}> = ({ lines, style, words, startSec = 0, variant = 0 }) => {
   const frame = useCurrentFrame();
   const { durationInFrames, fps, width } = useVideoConfig();
   const portrait = width < 1200;
   const t = startSec + frame / fps;
+  const v = ((variant % 3) + 3) % 3;
+  const bottomPct = portrait ? ["16%", "20%", "13%"][v] : ["12%", "16%", "9%"][v];
+  const pillBg = ["rgba(0,0,0,0.36)", "rgba(0,0,0,0.5)", "transparent"][v];
 
   let display: { text: string; active: number };
   if (words && words.length) {
@@ -38,13 +42,13 @@ export const Captions: React.FC<{
 
   return (
     <div style={{
-      position: "absolute", left: 0, right: 0, bottom: portrait ? "18%" : "12%",
+      position: "absolute", left: 0, right: 0, bottom: bottomPct,
       padding: portrait ? "0 8%" : "0 14%", textAlign: "center",
       transform: `translateY(${y}px)`,
     }}>
       <div style={{
         display: "inline-block", padding: "14px 28px", borderRadius: 18,
-        background: "rgba(0,0,0,0.36)", backdropFilter: "blur(6px)",
+        background: pillBg, backdropFilter: pillBg === "transparent" ? "none" : "blur(6px)",
         fontFamily: style.font, fontWeight: 800,
         fontSize: portrait ? 62 : 52, lineHeight: 1.22,
         textShadow: "0 2px 16px rgba(0,0,0,0.85)",

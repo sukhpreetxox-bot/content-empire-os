@@ -58,6 +58,8 @@ def render(niche: dict, title: str, hook: str, script_lines: list[str],
         "bgVideo": bg_name,
         "bgImages": bg_image_names or None,
         "words": words or None,
+        # deterministic per-video layout variation (anti-templated for policy)
+        "variant": sum(ord(c) for c in out_path.stem) % 3,
         "durationInFrames": max(int(duration_seconds * FPS), FPS * 3),
     }
 
