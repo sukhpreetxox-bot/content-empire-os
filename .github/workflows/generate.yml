@@ -4,7 +4,8 @@ name: generate
 # -> writes rows with status 'review' for you to approve in the dashboard.
 on:
   schedule:
-    - cron: "0 7 * * *"   # daily 07:00 UTC (best-effort timing on Actions)
+    - cron: "0 7 * * *"     # daily 07:00 UTC → Shorts (reach)
+    - cron: "0 6 * * 1,4"   # Mon & Thu 06:00 UTC → deep long-form (revenue)
   workflow_dispatch:
     inputs:
       platform:
@@ -12,9 +13,9 @@ on:
         required: false
         default: ""
       format:
-        description: "long or short (YouTube Shorts)"
+        description: "short | long | deep"
         required: false
-        default: "long"
+        default: "short"
 
 concurrency:
   group: generate
@@ -23,7 +24,7 @@ concurrency:
 jobs:
   generate:
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 120   # deep long-form renders are heavy
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -68,8 +69,14 @@ jobs:
         run: npm ci --prefix remotion || npm install --prefix remotion
       - name: Generate
         run: |
-          if [ -n "${{ github.event.inputs.platform }}" ]; then
-            python pipeline/gen_cron.py --platform "${{ github.event.inputs.platform }}"
+          # format: Mon/Thu schedule -> deep; other schedule -> short;
+          # manual dispatch -> the chosen input.
+          if [ "${{ github.event.schedule }}" = "0 6 * * 1,4" ]; then
+            FMT=deep
+          elif [ -n "${{ github.event.inputs.format }}" ]; then
+            FMT="${{ github.event.inputs.format }}"
           else
-            python pipeline/gen_cron.py
+            FMT=short
           fi
+          echo "format=$FMT"
+          python pipeline/gen_cron.py --platform youtube --format "$FMT"
