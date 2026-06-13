@@ -56,6 +56,21 @@ def build_prompt(niche: dict, fmt: str = "long", topic: str | None = None) -> st
             '"hook": "<=8 words, the first line", "angle": "<unique POV>", '
             '"script": "<90-120 words>"}'
         )
+    if fmt == "deep":
+        return base + (
+            "Write a DEEP long-form narration script: 8-11 minutes, "
+            "1300-1700 words — this is a flagship, revenue (mid-roll) video.\n"
+            "Structure: a gripping cold-open hook; then 3-4 distinct movements "
+            "that each deepen the idea from a new angle (use a recognisable "
+            "philosophical anchor — e.g. a Stoic like Marcus Aurelius/Seneca/"
+            "Epictetus, or a timeless principle — reframed through this niche); "
+            "concrete imagery and one or two short stories/analogies; a slow, "
+            "resonant close that lands the transformation. Calm, authoritative, "
+            "almost meditative. No filler, no listicle padding, no clichés.\n"
+            'Return JSON: {"title": "<=70 chars, evergreen-searchable", '
+            '"hook": "<one-sentence cold open>", "angle": "<the through-line>", '
+            '"script": "<full 1300-1700 word narration>"}'
+        )
     return base + (
         "Write a 60-90 second narration script. REQUIRED: at least 170 words "
         "(aim for 170-220). It must carry a UNIQUE angle, analysis, or "
@@ -72,6 +87,18 @@ def _caption_lines(script: str, max_lines: int = 7) -> list[str]:
     return parts[:max_lines] or [script[:120]]
 
 
+def _scene_prompts(script: str, n: int) -> list[str]:
+    """n visual anchors (sentences) spread across the script, for AI scenes."""
+    import re
+    sents = [s.strip() for s in re.split(r"(?<=[.!?])\s+", script) if s.strip()]
+    if not sents:
+        return [script[:120]]
+    if len(sents) <= n:
+        return sents
+    step = len(sents) / n
+    return [sents[min(int(i * step), len(sents) - 1)] for i in range(n)]
+
+
 def render_video(niche: dict, title: str, hook: str, script: str,
                  audio: Path, slug: str, portrait: bool = False
                  ) -> tuple[Path, Path, list[dict]]:
@@ -84,12 +111,14 @@ def render_video(niche: dict, title: str, hook: str, script: str,
     lines = _caption_lines(script)
     credits: list[dict] = []
 
-    # 1. PRIMARY visuals: one unique AI image per script beat (per-niche style).
-    #    Cloudflare Workers AI → Pollinations → (Pexels fallback below).
+    # 1. PRIMARY visuals: AI images spread across the video (~1 per 55s, capped
+    #    to protect the free Cloudflare daily quota). Cloudflare → Pollinations.
+    n_scenes = max(3, min(10, round(duration / 55)))
+    scene_prompts = _scene_prompts(script, n_scenes)
     bg_images: list[Path] = []
     try:
         bg_images = ai_images.scene_images(
-            lines, BROLL_DIR / slug, niche.get("image_style") or niche["category"],
+            scene_prompts, BROLL_DIR / slug, niche.get("image_style") or niche["category"],
             width=w, height=h)
         if bg_images:
             credits = [{"source": "AI (Cloudflare Workers AI / Pollinations FLUX)"}]
@@ -150,8 +179,9 @@ def generate_for_channel(channel: dict, fmt: str = "long") -> None:
     cid = row["id"]
     slug = f"{niche['slug']}_{fmt}_{cid[:8]}"
 
-    # 2. editorial-value gate (lower length bar for Shorts)
-    result = editorial.check(niche, draft, min_words=70 if fmt == "short" else 120)
+    # 2. editorial-value gate (length bar by format)
+    min_words = {"short": 70, "deep": 1000}.get(fmt, 120)
+    result = editorial.check(niche, draft, min_words=min_words)
     if not result.passed:
         db.update_content(cid, status="rejected", editorial_passed=False,
                           editorial_notes=result.notes, reject_reason="editorial gate")
@@ -206,7 +236,7 @@ def generate_for_channel(channel: dict, fmt: str = "long") -> None:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--platform", choices=["youtube", "instagram"])
-    ap.add_argument("--format", choices=["long", "short"], default="long")
+    ap.add_argument("--format", choices=["long", "short", "deep"], default="long")
     args = ap.parse_args()
 
     channels = db.get_active_channels(args.platform)
