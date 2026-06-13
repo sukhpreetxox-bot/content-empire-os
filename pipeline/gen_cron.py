@@ -58,8 +58,9 @@ def build_prompt(niche: dict, fmt: str = "long", topic: str | None = None) -> st
         )
     if fmt == "deep":
         return base + (
-            "Write a DEEP long-form narration script: 8-11 minutes, "
-            "1300-1700 words — this is a flagship, revenue (mid-roll) video.\n"
+            "Write a DEEP long-form narration script: 9-12 minutes, "
+            "1900-2400 words (this MUST exceed 8 minutes so YouTube places "
+            "mid-roll ads — do not stop early). This is a flagship revenue video.\n"
             "Structure: a gripping cold-open hook; then 3-4 distinct movements "
             "that each deepen the idea from a new angle (use a recognisable "
             "philosophical anchor — e.g. a Stoic like Marcus Aurelius/Seneca/"
@@ -180,7 +181,7 @@ def generate_for_channel(channel: dict, fmt: str = "long") -> None:
     slug = f"{niche['slug']}_{fmt}_{cid[:8]}"
 
     # 2. editorial-value gate (length bar by format)
-    min_words = {"short": 70, "deep": 1000}.get(fmt, 120)
+    min_words = {"short": 70, "deep": 1500}.get(fmt, 120)
     result = editorial.check(niche, draft, min_words=min_words)
     if not result.passed:
         db.update_content(cid, status="rejected", editorial_passed=False,
