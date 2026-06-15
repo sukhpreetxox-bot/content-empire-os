@@ -47,14 +47,15 @@ def build_prompt(niche: dict, fmt: str = "long", topic: str | None = None) -> st
     )
     if fmt == "short":
         return base + (
-            "Write a YOUTUBE SHORT script: 30-50 seconds, ~90-120 words. ONE "
-            "single sharp idea. Open with a curiosity-gap HOOK in the first "
-            "sentence that makes someone STOP scrolling. Punchy, fast, "
-            "conversational; end on a loop or a one-line takeaway. Must carry a "
-            "unique angle, not a bare fact.\n"
-            'Return JSON: {"title": "<=60 chars, curiosity-driven", '
-            '"hook": "<=8 words, the first line", "angle": "<unique POV>", '
-            '"script": "<90-120 words>"}'
+            "Write a high-retention YOUTUBE SHORT: 22-35 seconds, ~75-100 words. "
+            "ONE single sharp idea. The FIRST sentence must be a curiosity-gap "
+            "hook that lands in under 1 second (a bold claim, a sharp question, "
+            "or a pattern-break) — retention in the first second decides reach. "
+            "Fast, punchy, conversational. The LAST line must LOOP back to the "
+            "first so a rewatch feels seamless. Unique angle, never a bare fact.\n"
+            'Return JSON: {"title": "<=55 chars, curiosity-driven", '
+            '"hook": "<=7 words, the first line, instantly intriguing", '
+            '"angle": "<unique POV>", "script": "<75-100 words, loopable>"}'
         )
     if fmt == "deep":
         return base + (
@@ -156,20 +157,24 @@ def render_video(niche: dict, title: str, hook: str, script: str,
     return video_path, thumb_path, credits
 
 
-def generate_for_channel(channel: dict, fmt: str = "long") -> None:
+def generate_for_channel(channel: dict, fmt: str = "long",
+                         topic: str | None = None) -> None:
     niche = channel["niches"]
     handle = channel["handle"]
     print(f"[gen] {handle} ({niche['slug']}) [{fmt}] ...")
     portrait = fmt == "short" or niche["platform"] == "instagram"
 
-    # 1. idea + script — prefer YOUR submitted idea, else real search demand
-    idea = db.pop_idea(channel["id"])
-    if idea:
-        topic = idea["text"]
-        print(f"[gen] using your idea: {topic}")
+    # 1. topic: explicit override → your inbox idea → real search demand
+    if topic:
+        print(f"[gen] topic (given): {topic}")
     else:
-        topic = trends.pick_topic(niche)
-        print(f"[gen] topic (trends): {topic}")
+        idea = db.pop_idea(channel["id"])
+        if idea:
+            topic = idea["text"]
+            print(f"[gen] using your idea: {topic}")
+        else:
+            topic = trends.pick_topic(niche)
+            print(f"[gen] topic (trends): {topic}")
     draft = llm.generate_json(build_prompt(niche, fmt, topic), system=SCRIPT_SYS)
     row = db.create_content(
         channel["id"], status="script", format=fmt,
