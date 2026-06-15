@@ -15,6 +15,9 @@ export const Outro: React.FC<{
   const local = frame - start;
   const fade = interpolate(local, [0, 14], [0, 1], { extrapolateRight: "clamp" });
   const rise = spring({ frame: local, fps, durationInFrames: 18, config: { damping: 200 } });
+  // emblem draws itself in (same motion as the intro) for a consistent bookend
+  const draw = interpolate(local, [6, fps * 1.3], [0, 1],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 
   return (
     <AbsoluteFill style={{
@@ -23,7 +26,7 @@ export const Outro: React.FC<{
     }}>
       <div style={{ transform: `translateY(${interpolate(rise, [0, 1], [20, 0])}px)`,
         display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
-        <BrandMark size={portrait ? 150 : 120} accent={accent} stroke={2.5} />
+        <BrandMark size={portrait ? 150 : 120} accent={accent} stroke={2.5} progress={draw} />
         <div style={{ fontFamily: font, color: "white", fontSize: portrait ? 52 : 46,
           fontWeight: 800, textAlign: "center", padding: "0 8%" }}>{closer}</div>
         <div style={{ fontFamily: font, color: accent, letterSpacing: 4,

@@ -97,7 +97,7 @@ export const NicheVideo: React.FC<NicheVideoProps> = ({
           background: style.accent }} />
       </div>
 
-      <Brand accent={style.accent} font={style.font} portrait={portrait} />
+      <Brand accent={style.accent} bg={style.bg} font={style.font} portrait={portrait} />
       <Outro accent={style.accent} bg={style.bg} font={style.font}
         portrait={portrait} closer={closer ?? undefined} />
 

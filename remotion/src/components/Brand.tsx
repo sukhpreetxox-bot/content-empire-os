@@ -1,34 +1,56 @@
 import React from "react";
-import { useCurrentFrame, useVideoConfig, interpolate, spring } from "remotion";
+import {
+  AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, Easing,
+} from "remotion";
 import { BrandMark } from "./BrandMark";
 
-// Recurring brand identity on every video:
-//  - a short emblem "flash" at the very start (signature),
-//  - then a small persistent corner bug for the rest (like a TV channel logo).
-export const Brand: React.FC<{ accent: string; font: string; portrait: boolean }> = ({
-  accent, font, portrait,
+const WORD = "QUIET CAPITAL";
+
+// Recurring, identical on every video:
+//  1) a clean intro CARD where the emblem DRAWS ITSELF and the wordmark reveals
+//     letter by letter, then dissolves to reveal the video,
+//  2) a small persistent corner bug for the rest.
+export const Brand: React.FC<{ accent: string; bg: string; font: string; portrait: boolean }> = ({
+  accent, bg, font, portrait,
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const introEnd = Math.round(fps * 1.5);
+  // Full intro card only on landscape (long/deep). Shorts stay hook-first
+  // (no 2s logo card eating retention) — just the corner bug.
+  const introDur = portrait ? 0 : Math.round(fps * 2.3);
 
-  if (frame < introEnd + fps) {
-    // INTRO FLASH (center)
-    const inIntro = spring({ frame, fps, durationInFrames: 16, config: { damping: 200 } });
-    const out = interpolate(frame, [introEnd, introEnd + fps], [1, 0],
+  if (frame < introDur) {
+    // emblem draw 0.15s → 1.5s with smooth easing
+    const progress = interpolate(frame, [fps * 0.15, fps * 1.5], [0, 1],
+      { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.inOut(Easing.cubic) });
+    const fadeOut = interpolate(frame, [introDur - fps * 0.45, introDur], [1, 0],
       { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+    const lineY = interpolate(frame, [fps * 1.4, fps * 1.8], [14, 0],
+      { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) });
+
     return (
-      <div style={{
-        position: "absolute", inset: 0, display: "flex", flexDirection: "column",
-        alignItems: "center", justifyContent: "center", gap: 18,
-        opacity: Math.min(inIntro, out),
+      <AbsoluteFill style={{
+        backgroundColor: bg, alignItems: "center", justifyContent: "center",
+        gap: portrait ? 26 : 22, opacity: fadeOut,
       }}>
-        <BrandMark size={portrait ? 180 : 150} accent={accent} stroke={2.5} />
-        <div style={{
-          fontFamily: font, color: accent, letterSpacing: 8,
-          fontSize: portrait ? 40 : 34, fontWeight: 700,
-        }}>QUIET&nbsp;CAPITAL</div>
-      </div>
+        <BrandMark size={portrait ? 200 : 168} accent={accent} stroke={2.4} progress={progress} />
+        <div style={{ display: "flex", transform: `translateY(${lineY}px)` }}>
+          {WORD.split("").map((ch, i) => {
+            const t = fps * 1.05 + i * 1.6; // staggered letters
+            const o = interpolate(frame, [t, t + 8], [0, 1],
+              { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+            const y = interpolate(o, [0, 1], [10, 0]);
+            return (
+              <span key={i} style={{
+                fontFamily: font, color: accent, fontWeight: 700,
+                fontSize: portrait ? 42 : 36, letterSpacing: portrait ? 8 : 7,
+                opacity: o, transform: `translateY(${y}px)`,
+                whiteSpace: "pre",
+              }}>{ch === " " ? " " : ch}</span>
+            );
+          })}
+        </div>
+      </AbsoluteFill>
     );
   }
 
