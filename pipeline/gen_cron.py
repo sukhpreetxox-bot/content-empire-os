@@ -31,8 +31,11 @@ SCRIPT_SYS = (
     "with a clear, specific point of view. You favour a counterintuitive, precise, "
     "almost philosophical insight over generic advice — every script should make "
     "the viewer feel they finally understood something they couldn't put into "
-    "words. No clichés, no listicles, no 'in today's world'. Output strictly the "
-    "requested JSON."
+    "words. No clichés, no listicles, no 'in today's world'. "
+    "Address the viewer directly ('you'), and CLOSE with one sincere, sharp "
+    "question that genuinely invites a reply in the comments — never 'like and "
+    "subscribe', a real question tied to the idea that makes them want to answer. "
+    "Output strictly the requested JSON."
 )
 
 
