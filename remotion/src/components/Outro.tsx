@@ -29,6 +29,11 @@ export const Outro: React.FC<{
         <BrandMark size={portrait ? 150 : 120} accent={accent} stroke={2.5} progress={draw} />
         <div style={{ fontFamily: font, color: "white", fontSize: portrait ? 52 : 46,
           fontWeight: 800, textAlign: "center", padding: "0 8%" }}>{closer}</div>
+        {/* Signed sign-off — a visible persona signature on every video. */}
+        <div style={{ fontFamily: font, color: accent, fontSize: portrait ? 40 : 34,
+          fontWeight: 500, fontStyle: "italic", letterSpacing: 1, opacity: 0.95 }}>
+          — Quiet Capital
+        </div>
         <div style={{ fontFamily: font, color: accent, letterSpacing: 4,
           fontSize: portrait ? 32 : 26, fontWeight: 600 }}>
           ▸ SUBSCRIBE · QUIET CAPITAL
