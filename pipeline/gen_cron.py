@@ -46,6 +46,14 @@ def build_prompt(niche: dict, fmt: str = "long", topic: str | None = None) -> st
         f"Channel: {niche['display_name']} ({niche['category']}).\n"
         f"Tone: {niche['tone']}. Audience: {niche.get('audience','general')}.\n"
         f"Topic to cover: {topic}.\n\n"
+        "PERSONA: You are Quiet Capital — a sharp, calm, unmistakably opinionated "
+        "voice on inner development (attention, character, consciousness, sovereignty). "
+        "You are NOT a neutral narrator. You take a clear stance, name the "
+        "uncomfortable truth, and challenge the viewer's assumptions directly. "
+        "Confident, never hedging ('maybe', 'some people think', 'it could be'). "
+        "Contrarian where the mainstream is lazy, but always precise and earned — "
+        "never a cheap hot-take or fake-guru bait. Address the viewer as 'you'. "
+        "Signature register: quiet conviction, not loud hype.\n\n"
         f"Write the title AND script entirely in {SCRIPT_LANGUAGE}.\n"
     )
     if fmt == "short":
