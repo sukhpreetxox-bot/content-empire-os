@@ -6,10 +6,13 @@
 - Logs the top performers.
 - Auto-steer: seeds ONE idea echoing the best video's angle so the channel
   leans into what works (skipped if already seeded today).
+- Pulls watch-time + retention per video (YouTube Analytics API) and stores
+  avg_view_duration_s / retention_pct — the signal that actually matters.
 - Keeps the Supabase free-tier project awake.
 
-Watch-time / retention need the YouTube Analytics API enabled in the GCP
-project; this runs fine without it (views/likes/comments are real-time).
+Retention/watch-time need the YouTube Analytics API enabled + the token's
+yt-analytics.readonly scope; if either is missing the query degrades
+gracefully (views/likes/comments still land, retention stays null).
 """
 from __future__ import annotations
 import sys
@@ -59,6 +62,39 @@ def _channel_stats(token_ref: str) -> dict[str, dict]:
     return out
 
 
+def _channel_retention(token_ref: str) -> dict[str, dict]:
+    """video_id -> {avg_view_duration_s, retention_pct, est_minutes} via the
+    YouTube Analytics API. Returns {} if the API/scope is unavailable."""
+    from google.oauth2.credentials import Credentials
+    from googleapiclient.discovery import build
+    creds = Credentials.from_authorized_user_file(
+        str(Path(YOUTUBE_OAUTH_DIR) / f"{token_ref}.json"))
+    ya = build("youtubeAnalytics", "v2", credentials=creds)
+    r = ya.reports().query(
+        ids="channel==MINE",
+        startDate="2020-01-01",
+        endDate=date.today().isoformat(),
+        metrics="views,averageViewDuration,averageViewPercentage,"
+                "estimatedMinutesWatched",
+        dimensions="video",
+        sort="-views",
+        maxResults=200,
+    ).execute()
+    headers = [h["name"] for h in r.get("columnHeaders", [])]
+    out: dict[str, dict] = {}
+    for row in r.get("rows", []):
+        rec = dict(zip(headers, row))
+        vid = rec.get("video")
+        if not vid:
+            continue
+        out[vid] = {
+            "avg_view_duration_s": rec.get("averageViewDuration"),
+            "retention_pct": rec.get("averageViewPercentage"),
+            "est_minutes": rec.get("estimatedMinutesWatched"),
+        }
+    return out
+
+
 def collect() -> None:
     today = date.today().isoformat()
     channels = db.get_active_channels("youtube")
@@ -72,6 +108,13 @@ def collect() -> None:
             print(f"[analytics] {ch['handle']} stats failed: {e}")
             continue
 
+        # watch-time + retention (best-effort — degrades to {} if scope missing)
+        try:
+            retention = _channel_retention(ref)
+        except Exception as e:  # noqa: BLE001
+            print(f"[analytics] {ch['handle']} retention unavailable: {e}")
+            retention = {}
+
         published = db.get_published_content(ch["id"])
         ranked = []
         for c in published:
@@ -79,17 +122,25 @@ def collect() -> None:
             s = stats.get(vid) if vid else None
             if not s:
                 continue
-            db.upsert_analytics({
+            payload = {
                 "content_id": c["id"], "channel_id": ch["id"],
                 "snapshot_date": today, "views": s["views"],
                 "likes": s["likes"], "comments": s["comments"],
-            })
-            ranked.append((s["views"], s["title"], c))
+            }
+            rt = retention.get(vid) or {}
+            if rt.get("avg_view_duration_s") is not None:
+                payload["avg_view_duration_s"] = rt["avg_view_duration_s"]
+            if rt.get("retention_pct") is not None:
+                payload["retention_pct"] = rt["retention_pct"]
+            db.upsert_analytics(payload)
+            ranked.append((s["views"], s["title"], c, rt))
 
-        ranked.sort(reverse=True)
+        ranked.sort(key=lambda r: r[0], reverse=True)
         print(f"[analytics] {ch['handle']}: {len(ranked)} videos tracked")
-        for v, t, _ in ranked[:5]:
-            print(f"   {v:>5} views  {t[:50]}")
+        for v, t, _, rt in ranked[:5]:
+            ret = (f" · {float(rt['retention_pct']):.0f}% ret"
+                   if rt.get("retention_pct") is not None else "")
+            print(f"   {v:>5} views{ret}  {t[:46]}")
 
         # auto-steer: echo the top performer into the idea inbox (once/day)
         if ranked and ranked[0][0] >= 5:
