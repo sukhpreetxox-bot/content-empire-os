@@ -54,6 +54,17 @@ def build_prompt(niche: dict, fmt: str = "long", topic: str | None = None) -> st
         "Contrarian where the mainstream is lazy, but always precise and earned — "
         "never a cheap hot-take or fake-guru bait. Address the viewer as 'you'. "
         "Signature register: quiet conviction, not loud hype.\n\n"
+        "TITLE — this is the product; it decides whether anyone clicks. Write it "
+        "in the PROVEN patterns of this channel's top performers:\n"
+        "  • Concrete + second-person + visceral: 'Your Unread Messages Are "
+        "Attacking Your Nervous System'\n"
+        "  • Contrarian reframe: 'Your Avoidance Isn't Inaction. It's Control.'\n"
+        "  • Unexpected pairing: 'The Invisible Labor of Stillness', "
+        "'Motivation Is a Wake, Not an Engine'\n"
+        "Address 'you' or name a specific, felt tension. BANNED title styles "
+        "(these flopped): academic explainers like 'Unpacking Seneca's Timeless "
+        "Wisdom', '<Philosopher> on <Topic>', or any 'The Power of <abstract noun>' "
+        "cliché. Curiosity or a bold claim over a neutral description, always.\n\n"
         f"Write the title AND script entirely in {SCRIPT_LANGUAGE}.\n"
     )
     if fmt == "short":
@@ -198,7 +209,7 @@ def generate_for_channel(channel: dict, fmt: str = "long",
 
     # 2. editorial-value gate (length bar by format)
     min_words = {"short": 70, "deep": 1500}.get(fmt, 120)
-    result = editorial.check(niche, draft, min_words=min_words)
+    result = editorial.check(niche, draft, min_words=min_words, fmt=fmt)
     if not result.passed:
         db.update_content(cid, status="rejected", editorial_passed=False,
                           editorial_notes=result.notes, reject_reason="editorial gate")

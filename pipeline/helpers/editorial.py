@@ -38,31 +38,53 @@ def _append_disclaimers(script: str, disclaimers: list[str]) -> str:
     return out
 
 
-def _llm_judge(niche: dict, draft: dict) -> tuple[bool, str]:
-    """Ask a model whether the draft has real editorial value."""
+def _llm_judge(niche: dict, draft: dict, fmt: str = "long") -> tuple[bool, str]:
+    """Ask a model whether the draft has real editorial value.
+
+    Format-aware: a Short delivers ONE sharp idea and must not be judged by the
+    same "deep analysis" bar as a long-form essay. Resilient: a transient model
+    or parse error is retried before it can block a structurally-valid draft.
+    """
+    is_short = fmt == "short"
+    bar = 5 if is_short else 6
+    criterion = (
+        "This is a SHORT (~20-40s). PASS if it lands ONE sharp, non-obvious idea "
+        "with a clear point of view — punchy and single-idea is exactly right, it "
+        "does NOT need deep analysis. Only fail bare fact-recaps or generic slop."
+        if is_short else
+        "It must have a UNIQUE point of view, analysis, or transformation — not a "
+        "bare recap of facts, not a generic template."
+    )
     prompt = (
         f"Niche: {niche['display_name']} — {niche['category']}.\n"
         f"Title: {draft.get('title','')}\n"
         f"Stated angle: {draft.get('angle','')}\n"
         f"Script:\n{draft.get('script','')}\n\n"
-        "Judge this as a content-policy reviewer. It must have a UNIQUE point of "
-        "view, analysis, or transformation — not a bare recap of facts, not a "
-        "generic template. Rate 'value' 0-10 (10 = highly original/useful). "
+        f"Judge this as a content-policy reviewer. {criterion} "
+        "Rate 'value' 0-10 (10 = highly original/useful). "
         'Return JSON: {"value": <int>, "reason": "<short>"}'
     )
-    try:
-        v = llm.generate_json(prompt, system="You are a strict editorial reviewer.",
-                              temperature=0.2)
-        score = int(v.get("value", 0))
-        return score >= 6, f"value={score}: {v.get('reason','')}"
-    except Exception as e:  # noqa: BLE001
-        # Fail open would let junk through; fail closed is safer for policy.
-        return False, f"judge error ({e}) — blocked for safety"
+    last_err: Exception | None = None
+    for _ in range(2):  # retry once — infra flakiness must not decide policy
+        try:
+            v = llm.generate_json(prompt, system="You are a strict editorial reviewer.",
+                                  temperature=0.2)
+            score = int(v.get("value", 0))
+            return score >= bar, f"value={score}: {v.get('reason','')}"
+        except Exception as e:  # noqa: BLE001
+            last_err = e
+    # Retries exhausted. For Shorts, a transient judge outage should NOT kill a
+    # draft that already cleared the hard rules (length/angle/banned framings) —
+    # ship it. For long/deep (higher stakes, revenue), fail closed.
+    if is_short:
+        return True, f"judge unavailable ({last_err}) — short passed on hard rules"
+    return False, f"judge error ({last_err}) — blocked for safety"
 
 
-def check(niche: dict, draft: dict, min_words: int = MIN_SCRIPT_WORDS) -> EditorialResult:
+def check(niche: dict, draft: dict, min_words: int = MIN_SCRIPT_WORDS,
+          fmt: str = "long") -> EditorialResult:
     """Run all gates. `draft` has keys: title, hook, angle, script.
-    min_words is lower for Shorts (passed by the caller)."""
+    min_words and the LLM-judge bar are format-aware (lower for Shorts)."""
     script = (draft.get("script") or "").strip()
     angle = (draft.get("angle") or "").strip()
     reasons: list[str] = []
@@ -88,7 +110,7 @@ def check(niche: dict, draft: dict, min_words: int = MIN_SCRIPT_WORDS) -> Editor
     script = _append_disclaimers(script, niche.get("required_disclaimers") or [])
 
     # 3. LLM originality judge
-    ok, note = _llm_judge(niche, {**draft, "script": script})
+    ok, note = _llm_judge(niche, {**draft, "script": script}, fmt=fmt)
     if not ok:
         return EditorialResult(False, note, script)
 
