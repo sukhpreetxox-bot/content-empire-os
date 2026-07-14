@@ -174,8 +174,16 @@ def render_video(niche: dict, title: str, hook: str, script: str,
             raise
         ffmpeg.concat_broll(clips, audio, video_path, width=w, height=h)
 
+    # Thumbnail: deliberate on-brand Remotion still (packaging = product);
+    # random-frame grab only as a last-resort fallback.
     thumb_path = THUMB_DIR / f"{slug}.jpg"
-    ffmpeg.thumbnail(video_path, thumb_path, at_seconds=1.0)
+    try:
+        remotion_helper.render_thumbnail(
+            niche, title, thumb_path,
+            bg_image=bg_images[0] if bg_images else None)
+    except Exception as e:  # noqa: BLE001
+        print(f"[gen] branded thumbnail failed ({e}); frame-grab fallback")
+        ffmpeg.thumbnail(video_path, thumb_path, at_seconds=1.0)
     return video_path, thumb_path, credits
 
 
@@ -264,7 +272,9 @@ def generate_for_channel(channel: dict, fmt: str = "long",
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--platform", choices=["youtube", "instagram"])
-    ap.add_argument("--format", choices=["long", "short", "deep"], default="long")
+    # 'long' (60-90s) retired: too long for Shorts reach, too short for
+    # watch-time/mid-roll revenue. Funnel = Shorts (reach) + deep (revenue).
+    ap.add_argument("--format", choices=["short", "deep"], default="short")
     args = ap.parse_args()
 
     channels = db.get_active_channels(args.platform)

@@ -1,6 +1,7 @@
 import React from "react";
 import { Composition } from "remotion";
 import { NicheVideo } from "./NicheVideo";
+import { Thumbnail, THUMB_DEFAULT } from "./Thumbnail";
 import { DEFAULT_PROPS, NicheVideoProps } from "./style";
 
 const FPS = 30;
@@ -34,6 +35,15 @@ export const RemotionRoot: React.FC = () => {
         durationInFrames={FPS * 12}
         defaultProps={DEFAULT_PROPS}
         calculateMetadata={calcMeta}
+      />
+      <Composition
+        id="Thumbnail"
+        component={Thumbnail}
+        width={1280}
+        height={720}
+        fps={FPS}
+        durationInFrames={1}
+        defaultProps={THUMB_DEFAULT}
       />
     </>
   );

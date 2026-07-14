@@ -76,3 +76,41 @@ def render(niche: dict, title: str, hook: str, script_lines: list[str],
         cwd=str(REMOTION_DIR), check=True,
     )
     return out_path
+
+
+def render_thumbnail(niche: dict, title: str, out_path: Path,
+                     bg_image: Path | None = None) -> Path:
+    """Render a deliberate on-brand 1280x720 thumbnail via `remotion still`.
+
+    Uses the same brand emblem/font/colours as the video (packaging = product),
+    optionally over a darkened AI scene image. Never a random video frame.
+    """
+    pub = _public_dir()
+    bg_name = None
+    if bg_image:
+        bg_name = f"{Path(out_path).stem}_thumbbg{Path(bg_image).suffix}"
+        shutil.copy(bg_image, pub / bg_name)
+
+    style = niche.get("style_props") or {}
+    props = {
+        "style": {
+            "bg": style.get("bg", "#0a1f3c"),
+            "accent": style.get("accent", "#d4af37"),
+            "font": style.get("font", "Georgia"),
+            "mood": style.get("mood", "calm"),
+        },
+        "title": title,
+        "bgImage": bg_name,
+        "variant": sum(ord(c) for c in Path(out_path).stem) % 3,
+    }
+    out_path = Path(out_path).resolve()
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+        json.dump(props, f)
+        props_file = f.name
+
+    subprocess.run(
+        ["npx", "remotion", "still", "Thumbnail", str(out_path),
+         f"--props={props_file}"],
+        cwd=str(REMOTION_DIR), check=True,
+    )
+    return out_path
