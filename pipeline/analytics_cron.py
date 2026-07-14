@@ -142,18 +142,35 @@ def collect() -> None:
                    if rt.get("retention_pct") is not None else "")
             print(f"   {v:>5} views{ret}  {t[:46]}")
 
-        # auto-steer: echo the top performer into the idea inbox (once/day)
-        if ranked and ranked[0][0] >= 5:
-            top_title, top_c = ranked[0][1], ranked[0][2]
+        # auto-steer: echo the real WINNER into the idea inbox (once/day).
+        # Retention (did people watch?) beats raw views (did the algo push it?)
+        # as the signal for "what actually works". Pick the highest-retention
+        # video among those with real traffic; fall back to top-views if no
+        # retention data is available yet.
+        def _quality(t: tuple) -> tuple:
+            views, _title, _c, rt = t
+            rp = rt.get("retention_pct")
+            return (float(rp) if rp is not None else -1.0, views)
+
+        watchable = [t for t in ranked if t[0] >= 3]
+        winner = (max(watchable, key=_quality) if watchable
+                  else (ranked[0] if ranked else None))
+        if winner:
+            top_views, top_title, top_c, top_rt = winner
+            rp = top_rt.get("retention_pct")
+            signal = (f"{float(rp):.0f}% retention" if rp is not None
+                      else f"{top_views} views")
             already = (db.db().table("ideas").select("id")
                        .eq("status", "new").ilike("text", f"%{top_title[:24]}%")
                        .execute().data)
             if not already:
                 db.create_idea(
                     f"Make another angle in the vein of the winner '{top_title}' "
-                    f"(it is pulling the most views) — go deeper on that theme.",
+                    f"(strongest signal: {signal}) — same format/hook style, "
+                    f"go deeper on that theme.",
                     ch["id"])
-                print(f"   ↳ seeded a winner-echo idea from: {top_title[:40]}")
+                print(f"   ↳ seeded a winner-echo idea from: "
+                      f"{top_title[:40]} ({signal})")
 
 
 def main() -> None:
