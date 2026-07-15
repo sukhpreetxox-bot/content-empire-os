@@ -44,11 +44,12 @@ export const NicheVideo: React.FC<NicheVideoProps> = ({
   const v = ((variant % 3) + 3) % 3;
   const titleTop = [portrait ? "11%" : "9%", portrait ? "14%" : "12%", portrait ? "9%" : "7%"][v];
 
-  // Title: blur + scale in, then settles.
-  const tIn = spring({ frame, fps, config: { damping: 200 }, durationInFrames: 24 });
-  const titleBlur = interpolate(tIn, [0, 1], [16, 0]);
-  const titleY = interpolate(tIn, [0, 1], [50, 0]);
-  const hookIn = spring({ frame: frame - 12, fps, config: { damping: 200 }, durationInFrames: 20 });
+  // Title: settle almost instantly — the claim must be legible at frame 0
+  // (a slow blur-in costs first-second retention on Shorts).
+  const tIn = spring({ frame, fps, config: { damping: 200 }, durationInFrames: 10 });
+  const titleBlur = interpolate(tIn, [0, 1], [7, 0]);
+  const titleY = interpolate(tIn, [0, 1], [24, 0]);
+  const hookIn = spring({ frame: frame - 4, fps, config: { damping: 200 }, durationInFrames: 12 });
 
   // Progress bar.
   const progress = interpolate(frame, [0, durationInFrames], [0, 1]);
@@ -85,9 +86,10 @@ export const NicheVideo: React.FC<NicheVideoProps> = ({
         </div>
       </div>
 
-      {/* Word-by-word captions (lower third) */}
-      <Sequence from={Math.round(fps * 1.6)}>
-        <Captions lines={scriptLines} style={style} words={words} startSec={1.6} variant={v} />
+      {/* Word-by-word captions (lower third) — start almost immediately so the
+          spoken hook has synced words in the first second, not after 1.6s. */}
+      <Sequence from={Math.round(fps * 0.5)}>
+        <Captions lines={scriptLines} style={style} words={words} startSec={0.5} variant={v} />
       </Sequence>
 
       {/* Progress bar */}

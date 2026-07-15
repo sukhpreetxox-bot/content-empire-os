@@ -69,15 +69,26 @@ def build_prompt(niche: dict, fmt: str = "long", topic: str | None = None) -> st
     )
     if fmt == "short":
         return base + (
-            "Write a high-retention YOUTUBE SHORT: 22-35 seconds, ~75-100 words. "
-            "ONE single sharp idea. The FIRST sentence must be a curiosity-gap "
-            "hook that lands in under 1 second (a bold claim, a sharp question, "
-            "or a pattern-break) — retention in the first second decides reach. "
-            "Fast, punchy, conversational. The LAST line must LOOP back to the "
-            "first so a rewatch feels seamless. Unique angle, never a bare fact.\n"
+            "Write a high-retention YOUTUBE SHORT: 20-30 seconds, ~70-90 words "
+            "(shorter holds retention — do not pad). ONE single sharp idea.\n"
+            "HOOK (first line) — this decides everything. Our data shows what "
+            "works: a COMPLETE, declarative, counter-intuitive claim that flips a "
+            "common belief, or a sharp paradox. It must be a finished thought, "
+            "not a tease.\n"
+            "  WORKS (retention 100-185%): 'Motivation doesn't start anything.' · "
+            "'What if doing nothing is your most vital work?' · "
+            "'What you avoid owns you.'\n"
+            "  FAILS (retention 0-14%): vague curiosity with no substance "
+            "('One strange discipline the titans mastered'), or abstract meta "
+            "('Thinking for yourself isn't about thinking'). NEVER write these.\n"
+            "BODY — a great hook dies if the body drifts. Every sentence must "
+            "ADVANCE with a concrete, specific image or turn — never restate the "
+            "hook in abstract terms, never generalise. Build to one felt payoff.\n"
+            "The LAST line must LOOP cleanly back into the first so a rewatch "
+            "feels seamless (this is how Shorts pass 100% retention).\n"
             'Return JSON: {"title": "<=55 chars, curiosity-driven", '
-            '"hook": "<=7 words, the first line, instantly intriguing", '
-            '"angle": "<unique POV>", "script": "<75-100 words, loopable>"}'
+            '"hook": "<=8 words, a complete counter-intuitive claim", '
+            '"angle": "<unique POV>", "script": "<70-90 words, concrete, loopable>"}'
         )
     if fmt == "deep":
         return base + (
@@ -216,7 +227,7 @@ def generate_for_channel(channel: dict, fmt: str = "long",
     slug = f"{niche['slug']}_{fmt}_{cid[:8]}"
 
     # 2. editorial-value gate (length bar by format)
-    min_words = {"short": 70, "deep": 1500}.get(fmt, 120)
+    min_words = {"short": 55, "deep": 1500}.get(fmt, 120)
     result = editorial.check(niche, draft, min_words=min_words, fmt=fmt)
     if not result.passed:
         db.update_content(cid, status="rejected", editorial_passed=False,
