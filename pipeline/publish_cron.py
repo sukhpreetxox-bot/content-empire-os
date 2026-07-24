@@ -5,6 +5,7 @@ Only ever touches rows with status='approved' and scheduled_for due. Respects
 per-platform daily caps and throttles between uploads.
 """
 from __future__ import annotations
+import re
 import sys
 import time
 import traceback
@@ -33,8 +34,45 @@ def _local_video(content: dict) -> Path:
     return storage.download(url, dest)
 
 
+_STOPWORDS = {
+    "the", "and", "for", "not", "but", "this", "that", "its", "are", "was",
+    "with", "from", "how", "why", "what", "when", "who", "one", "just", "only",
+    "more", "less", "than", "then", "your", "you", "his", "her", "them", "they",
+    "isn", "it's", "isn't", "doesn", "does", "been", "being", "into", "about",
+    "make", "makes", "made", "will", "would", "could", "should", "every",
+}
+
+
+def _keywords(content: dict, limit: int = 6) -> list[str]:
+    """Per-video keywords taken from its OWN title/angle.
+
+    Reusing the same niche topic list on every upload makes all videos look
+    identical to the algorithm; per-video terms are a far better signal.
+    """
+    text = f"{content.get('title') or ''} {content.get('editorial_angle') or ''}"
+    out: list[str] = []
+    for raw in re.findall(r"[A-Za-z][A-Za-z'-]{3,}", text.lower()):
+        w = raw.strip("'-")
+        if len(w) < 4 or w in _STOPWORDS or w in out:
+            continue
+        out.append(w)
+        if len(out) >= limit:
+            break
+    return out
+
+
+def _hashtags(content: dict) -> str:
+    tags = [f"#{w.capitalize()}" for w in _keywords(content, 3)]
+    if content.get("format") == "short":
+        tags.insert(0, "#Shorts")
+    return " ".join(tags)
+
+
 def _description(content: dict, niche: dict) -> str:
     parts = [content.get("hook") or "", "", content.get("editorial_angle") or ""]
+    hashtags = _hashtags(content)
+    if hashtags:
+        parts += ["", hashtags]
     for d in (niche.get("required_disclaimers") or []):
         parts += ["", d]
     credit = (content.get("meta") or {}).get("music_credit")
@@ -76,7 +114,7 @@ def publish_one(content: dict) -> None:
     if platform == "youtube":
         vid = youtube.upload(
             channel, _local_video(content), title=title, description=desc,
-            tags=(niche.get("topics") or [])[:10],
+            tags=(_keywords(content, 8) + (niche.get("topics") or []))[:12],
             synthetic=content.get("synthetic_disclosure", True),
             privacy=PUBLISH_PRIVACY,
         )
