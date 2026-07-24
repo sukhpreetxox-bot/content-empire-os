@@ -216,7 +216,8 @@ def generate_for_channel(channel: dict, fmt: str = "long",
         else:
             topic = trends.pick_topic(niche)
             print(f"[gen] topic (trends): {topic}")
-    draft = llm.generate_json(build_prompt(niche, fmt, topic), system=SCRIPT_SYS)
+    base_prompt = build_prompt(niche, fmt, topic)
+    draft = llm.generate_json(base_prompt, system=SCRIPT_SYS)
     row = db.create_content(
         channel["id"], status="script", format=fmt,
         title=draft.get("title"), hook=draft.get("hook"),
@@ -226,14 +227,34 @@ def generate_for_channel(channel: dict, fmt: str = "long",
     cid = row["id"]
     slug = f"{niche['slug']}_{fmt}_{cid[:8]}"
 
-    # 2. editorial-value gate (length bar by format)
+    # 2. editorial-value gate (length bar by format), with ONE corrective retry.
+    #    A single bad LLM roll must not cost the whole day's video: feed the
+    #    rejection reason back and regenerate before giving up.
     min_words = {"short": 55, "deep": 1500}.get(fmt, 120)
     result = editorial.check(niche, draft, min_words=min_words, fmt=fmt)
     if not result.passed:
-        db.update_content(cid, status="rejected", editorial_passed=False,
-                          editorial_notes=result.notes, reject_reason="editorial gate")
-        print(f"[gen] {handle} BLOCKED by editorial gate: {result.notes}")
-        return
+        print(f"[gen] {handle} gate rejected attempt 1 ({result.notes}) — retrying")
+        retry_prompt = (
+            f"{base_prompt}\n\n"
+            f"YOUR PREVIOUS ATTEMPT WAS REJECTED: {result.notes}\n"
+            f"Fix exactly that. Hard requirements: the script must be at least "
+            f"{min_words} words, and 'angle' must state a specific, substantive "
+            "point of view — not a vague restatement of the topic."
+        )
+        draft2 = llm.generate_json(retry_prompt, system=SCRIPT_SYS)
+        result2 = editorial.check(niche, draft2, min_words=min_words, fmt=fmt)
+        if not result2.passed:
+            db.update_content(
+                cid, status="rejected", editorial_passed=False,
+                editorial_notes=f"attempt1: {result.notes} || attempt2: {result2.notes}",
+                reject_reason="editorial gate (2 attempts)")
+            print(f"[gen] {handle} BLOCKED after retry: {result2.notes}")
+            return
+        draft, result = draft2, result2
+        db.update_content(cid, title=draft.get("title"), hook=draft.get("hook"),
+                          topic=draft.get("title"),
+                          editorial_angle=draft.get("angle"))
+        print(f"[gen] {handle} retry passed the gate")
     db.update_content(cid, script=result.script, editorial_passed=True,
                       editorial_notes=result.notes)
 
