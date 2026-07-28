@@ -69,12 +69,19 @@ def build_prompt(niche: dict, fmt: str = "long", topic: str | None = None) -> st
     )
     if fmt == "short":
         return base + (
-            "Write a high-retention YOUTUBE SHORT: 20-30 seconds, ~70-90 words "
-            "(shorter holds retention — do not pad). ONE single sharp idea.\n"
-            "HOOK (first line) — this decides everything. Our data shows what "
-            "works: a COMPLETE, declarative, counter-intuitive claim that flips a "
-            "common belief, or a sharp paradox. It must be a finished thought, "
-            "not a tease.\n"
+            "Write a high-retention YOUTUBE SHORT: 18-28 seconds, ~60-80 words "
+            "(shorter holds retention — do not pad; 50-60% of viewers quit in "
+            "the first 3 seconds). ONE single sharp idea.\n"
+            "HOOK (first line) — spoken in under 2.5s, it decides everything. "
+            "Use ONE of these proven formulas, present tense, active verb:\n"
+            "  1. PATTERN INTERRUPT — a contradiction that breaks autopilot: "
+            "'Motivation doesn't start anything.'\n"
+            "  2. DIRECT PROMISE — one concrete payoff up front: 'In 20 seconds, "
+            "why your attention isn't yours.'\n"
+            "  3. QUESTION — name a specific felt struggle: 'Why does your best "
+            "thinking vanish the second you grab your phone?'\n"
+            "It must be a COMPLETE, finished thought that flips a common belief — "
+            "never a vague tease.\n"
             "  WORKS (retention 100-185%): 'Motivation doesn't start anything.' · "
             "'What if doing nothing is your most vital work?' · "
             "'What you avoid owns you.'\n"
@@ -88,7 +95,7 @@ def build_prompt(niche: dict, fmt: str = "long", topic: str | None = None) -> st
             "feels seamless (this is how Shorts pass 100% retention).\n"
             'Return JSON: {"title": "<=55 chars, curiosity-driven", '
             '"hook": "<=8 words, a complete counter-intuitive claim", '
-            '"angle": "<unique POV>", "script": "<70-90 words, concrete, loopable>"}'
+            '"angle": "<unique POV>", "script": "<60-80 words, concrete, loopable>"}'
         )
     if fmt == "deep":
         return base + (
@@ -146,9 +153,14 @@ def render_video(niche: dict, title: str, hook: str, script: str,
     lines = _caption_lines(script)
     credits: list[dict] = []
 
-    # 1. PRIMARY visuals: AI images spread across the video (~1 per 55s, capped
-    #    to protect the free Cloudflare daily quota). Cloudflare → Pollinations.
-    n_scenes = max(3, min(10, round(duration / 55)))
+    # 1. PRIMARY visuals: AI images spread across the video. Shorts need a
+    #    visual reset every ~3-4s (best-practice for retention — a slow ~8s
+    #    hold bleeds viewers); long/deep pace ~1 per 55s. Capped to protect the
+    #    free Cloudflare daily quota. Cloudflare → Pollinations.
+    if duration <= 40:  # Short: fast cadence, one scene ~every 3.5s
+        n_scenes = max(5, min(8, round(duration / 3.5)))
+    else:               # long/deep: calmer pacing
+        n_scenes = max(3, min(10, round(duration / 55)))
     scene_prompts = _scene_prompts(script, n_scenes)
     bg_images: list[Path] = []
     try:
