@@ -4,7 +4,8 @@ name: generate
 # -> writes rows with status 'review' for you to approve in the dashboard.
 on:
   schedule:
-    - cron: "0 7 * * *"     # daily 07:00 UTC → Shorts (reach)
+    - cron: "0 7 * * *"     # daily 07:00 UTC → Short #1 (reach)
+    - cron: "0 19 * * *"    # daily 19:00 UTC → Short #2 (2/day: faceless needs volume)
     # deep long-form PAUSED (retention ~5% on a 0-sub channel — too early).
     # Re-enable once Shorts build retention + subs. Still runnable on demand
     # via workflow_dispatch with format=deep.

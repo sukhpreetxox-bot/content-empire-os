@@ -308,9 +308,11 @@ def generate_for_channel(channel: dict, fmt: str = "long",
     db.update_content(cid, status="video", video_path=str(video),
                       thumbnail_path=str(thumb), broll_credits=credits, meta=meta)
 
-    # 5. ready for human review
-    db.update_content(cid, status="review")
-    print(f"[gen] {handle} -> review  ({result.notes})")
+    # 5. AUTONOMOUS MODE: the editorial gate already vetted quality, so approve
+    #    straight away — the publish cron will pick it up (respects the daily
+    #    upload cap). Flip back to status="review" to reinstate a human gate.
+    db.update_content(cid, status="approved", scheduled_for=None)
+    print(f"[gen] {handle} -> approved (auto)  ({result.notes})")
 
 
 def main() -> None:
