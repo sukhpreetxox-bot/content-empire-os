@@ -99,19 +99,41 @@ def build_prompt(niche: dict, fmt: str = "long", topic: str | None = None) -> st
         )
     if fmt == "deep":
         return base + (
-            "Write a DEEP long-form narration script: 9-12 minutes, "
-            "1900-2400 words (this MUST exceed 8 minutes so YouTube places "
-            "mid-roll ads — do not stop early). This is a flagship revenue video.\n"
-            "Structure: a gripping cold-open hook; then 3-4 distinct movements "
-            "that each deepen the idea from a new angle (use a recognisable "
-            "philosophical anchor — e.g. a Stoic like Marcus Aurelius/Seneca/"
-            "Epictetus, or a timeless principle — reframed through this niche); "
-            "concrete imagery and one or two short stories/analogies; a slow, "
-            "resonant close that lands the transformation. Calm, authoritative, "
-            "almost meditative. No filler, no listicle padding, no clichés.\n"
-            'Return JSON: {"title": "<=70 chars, evergreen-searchable", '
-            '"hook": "<one-sentence cold open>", "angle": "<the through-line>", '
-            '"script": "<full 1300-1700 word narration>"}'
+            "Write a DEEP long-form narration script, structured like a "
+            "retention-first video essay (ColdFusion / MagnatesMedia narrative, "
+            "applied to inner development). Target 1500-1900 words = ~10-12 min "
+            "at this channel's slow meditative pace, and it MUST exceed 8 spoken "
+            "minutes so YouTube places mid-roll ads. This is the flagship "
+            "revenue video.\n"
+            "RETENTION COMES FROM NARRATIVE TENSION, NOT from stacking ideas. "
+            "Documentary essays hold 40-60% to the midpoint because they set up "
+            "a tension and pay it off. Follow this beat structure exactly:\n"
+            "  1. HOOK (first 15s, ~30 words): a bold claim / sharp question / "
+            "curiosity gap that opens a real tension the viewer feels. No "
+            "throat-clearing, no 'in today's world'.\n"
+            "  2. SETUP (~150 words): why this tension matters; make the stakes "
+            "personal and concrete.\n"
+            "  3. MOVEMENT 1 (~450 words): develop the first angle and plant an "
+            "OPEN LOOP — promise something you resolve later ('there's a deeper "
+            "reason, and we'll get there'). Include ONE concrete vignette or a "
+            "historical anecdote about a Stoic (Marcus Aurelius / Seneca / "
+            "Epictetus) — a specific detail a generic essay would not have.\n"
+            "  4. RE-HOOK (~40 words): tease what's coming so the midpoint never "
+            "sags.\n"
+            "  5. MOVEMENTS 2-3 (~700 words): complicate, add a counter-intuitive "
+            "turn, then RESOLVE the open loop. Build toward one insight — never a "
+            "list.\n"
+            "  6. PAYOFF (~120 words): resolve the hook's promise explicitly ('if "
+            "you take one thing from this…'); the transformation lands here.\n"
+            "  7. CLOSE (~40 words): a resonant final line, then one sincere "
+            "question that invites a reply in the comments — never 'like and "
+            "subscribe'.\n"
+            "Voice: calm, authoritative, almost meditative — but always MOVING "
+            "forward. No filler, no listicle padding, no clichés.\n"
+            'Return JSON: {"title": "<=70 chars, tension/curiosity-driven, '
+            'evergreen-searchable", "hook": "<the 15s cold open, ~30 words>", '
+            '"angle": "<the through-line tension in one sentence>", '
+            '"script": "<full 1500-1900 word narration following the 7 beats>"}'
         )
     return base + (
         "Write a 60-90 second narration script. REQUIRED: at least 170 words "
@@ -242,7 +264,7 @@ def generate_for_channel(channel: dict, fmt: str = "long",
     # 2. editorial-value gate (length bar by format), with ONE corrective retry.
     #    A single bad LLM roll must not cost the whole day's video: feed the
     #    rejection reason back and regenerate before giving up.
-    min_words = {"short": 55, "deep": 1500}.get(fmt, 120)
+    min_words = {"short": 55, "deep": 1300}.get(fmt, 120)
     result = editorial.check(niche, draft, min_words=min_words, fmt=fmt)
     if not result.passed:
         print(f"[gen] {handle} gate rejected attempt 1 ({result.notes}) — retrying")

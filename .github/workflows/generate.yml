@@ -6,10 +6,11 @@ on:
   schedule:
     - cron: "0 7 * * *"     # daily 07:00 UTC → Short #1 (reach)
     - cron: "0 19 * * *"    # daily 19:00 UTC → Short #2 (2/day: faceless needs volume)
-    # deep long-form PAUSED (retention ~5% on a 0-sub channel — too early).
-    # Re-enable once Shorts build retention + subs. Still runnable on demand
-    # via workflow_dispatch with format=deep.
-    # - cron: "0 6 * * 1,4"   # Mon & Thu 06:00 UTC → deep long-form (revenue)
+    # deep long-form: RE-ENABLED with the documentary narrative structure
+    # (the old essay format got ~5% retention because it had no tension/open
+    # loops). Mon & Thu → 2 flagship 10-min essays/week; Shorts stay the reach
+    # engine. Watch retention; scale up only if it holds past the midpoint.
+    - cron: "0 6 * * 1,4"   # Mon & Thu 06:00 UTC → deep long-form (revenue)
   workflow_dispatch:
     inputs:
       platform:
