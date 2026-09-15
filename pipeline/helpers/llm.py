@@ -26,7 +26,8 @@ def _gemini(system: str, prompt: str, temperature: float) -> str:
         model=GEMINI_MODEL,
         contents=prompt,
         config=types.GenerateContentConfig(
-            system_instruction=system or None, temperature=temperature),
+            system_instruction=system or None, temperature=temperature,
+            max_output_tokens=8192),  # room for full 10-min deep scripts
     )
     return resp.text or ""
 
@@ -37,6 +38,7 @@ def _groq(system: str, prompt: str, temperature: float) -> str:
     resp = client.chat.completions.create(
         model=GROQ_MODEL,
         temperature=temperature,
+        max_tokens=8000,  # room for full 10-min deep scripts
         messages=[
             {"role": "system", "content": system},
             {"role": "user", "content": prompt},

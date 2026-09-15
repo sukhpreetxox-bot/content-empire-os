@@ -299,13 +299,27 @@ def generate_for_channel(channel: dict, fmt: str = "long",
     result = editorial.check(niche, draft, min_words=min_words, fmt=fmt)
     if not result.passed:
         print(f"[gen] {handle} gate rejected attempt 1 ({result.notes}) — retrying")
-        retry_prompt = (
-            f"{base_prompt}\n\n"
-            f"YOUR PREVIOUS ATTEMPT WAS REJECTED: {result.notes}\n"
-            f"Fix exactly that. Hard requirements: the script must be at least "
-            f"{min_words} words, and 'angle' must state a specific, substantive "
-            "point of view — not a vague restatement of the topic."
-        )
+        prev_script = draft.get("script", "")
+        if "too short" in result.notes.lower() and prev_script:
+            # Models under-deliver on word count when writing cold, but expand
+            # reliably. Feed the draft back and ask for expansion, not a restart.
+            retry_prompt = (
+                f"{base_prompt}\n\nYour previous script was too short "
+                f"({len(prev_script.split())} words). EXPAND it to at least "
+                f"{min_words} words — do NOT restart or shorten. Deepen every "
+                "beat: a longer concrete vignette, a fuller middle with the "
+                "counter-twist, more specific imagery. Keep the same title and "
+                f"through-line.\nRETURN THE SAME JSON SHAPE.\nDRAFT TO EXPAND:\n"
+                f"{prev_script}"
+            )
+        else:
+            retry_prompt = (
+                f"{base_prompt}\n\n"
+                f"YOUR PREVIOUS ATTEMPT WAS REJECTED: {result.notes}\n"
+                f"Fix exactly that. Hard requirements: the script must be at "
+                f"least {min_words} words, and 'angle' must state a specific, "
+                "substantive point of view — not a vague restatement."
+            )
         draft2 = llm.generate_json(retry_prompt, system=SCRIPT_SYS)
         result2 = editorial.check(niche, draft2, min_words=min_words, fmt=fmt)
         if not result2.passed:
