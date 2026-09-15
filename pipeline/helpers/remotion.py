@@ -26,6 +26,7 @@ def render(niche: dict, title: str, hook: str, script_lines: list[str],
            audio_path: Path, out_path: Path, duration_seconds: float,
            portrait: bool, bg_video: Path | None = None,
            bg_images: list[Path] | None = None,
+           bg_clips: list[Path] | None = None,
            words: list[dict] | None = None) -> Path:
     pub = _public_dir()
     audio_name = f"{out_path.stem}.mp3"
@@ -42,6 +43,12 @@ def render(niche: dict, title: str, hook: str, script_lines: list[str],
         shutil.copy(img, pub / name)
         bg_image_names.append(name)
 
+    bg_clip_names = []
+    for i, clip in enumerate(bg_clips or []):
+        name = f"{out_path.stem}_clip{i}{Path(clip).suffix}"
+        shutil.copy(clip, pub / name)
+        bg_clip_names.append(name)
+
     style = niche.get("style_props") or {}
     props = {
         "template": niche.get("remotion_template", "GenericTemplate"),
@@ -57,6 +64,7 @@ def render(niche: dict, title: str, hook: str, script_lines: list[str],
         "audioSrc": audio_name,
         "bgVideo": bg_name,
         "bgImages": bg_image_names or None,
+        "bgClips": bg_clip_names or None,
         "words": words or None,
         # deterministic per-video layout variation (anti-templated for policy)
         "variant": sum(ord(c) for c in out_path.stem) % 3,

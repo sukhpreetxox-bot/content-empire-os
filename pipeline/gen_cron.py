@@ -204,19 +204,50 @@ def render_video(niche: dict, title: str, hook: str, script: str,
         except Exception as e:  # noqa: BLE001
             print(f"[gen] no B-roll ({e}); solid background")
 
+    # 2b. LONG-FORM hero motion: interleave a few real Pexels clips among the
+    #     AI stills for cinematic variety (free; short-form stays stills-only).
+    #     Veo/Kling AI video has no free API tier, so we use real stock motion.
+    hero_clips: list[Path] = []
+    if duration > 120 and bg_images:
+        try:
+            q = random.choice(niche.get("topics") or [niche["category"]])
+            hero_clips, _hc = pexels.fetch_broll(
+                q, BROLL_DIR / f"{slug}_hero", count=4, orientation=orientation)
+            if hero_clips:
+                credits.append({"source": "Pexels (motion b-roll)"})
+        except Exception as e:  # noqa: BLE001
+            print(f"[gen] hero clips failed ({e}); stills only")
+
     # 3. Whisper word-level timings for frame-accurate karaoke captions.
     words = transcribe.word_timestamps(audio)
 
-    try:
+    def _render(with_clips: bool) -> None:
         remotion_helper.render(
             niche, title, hook, lines, audio, video_path,
             duration_seconds=duration, portrait=portrait,
             bg_video=clips[0] if clips else None,
-            bg_images=bg_images or None, words=words or None)
-    except Exception as e:  # noqa: BLE001 — last-resort FFmpeg assembly
-        print(f"[gen] Remotion render failed ({e}); FFmpeg fallback")
+            bg_images=bg_images or None,
+            bg_clips=hero_clips if with_clips else None,
+            words=words or None)
+
+    rendered = False
+    try:
+        _render(with_clips=bool(hero_clips))
+        rendered = True
+    except Exception as e:  # noqa: BLE001
+        print(f"[gen] Remotion render failed ({e})")
+        # Motion b-roll must NEVER break the flagship: retry stills-only (the
+        # proven path) before falling back to FFmpeg.
+        if hero_clips:
+            try:
+                print("[gen] retrying stills-only (dropping motion clips)")
+                _render(with_clips=False)
+                rendered = True
+            except Exception as e2:  # noqa: BLE001
+                print(f"[gen] stills-only also failed ({e2})")
+    if not rendered:
         if not clips:
-            raise
+            raise RuntimeError("Remotion render failed and no B-roll fallback")
         ffmpeg.concat_broll(clips, audio, video_path, width=w, height=h)
 
     # Thumbnail: deliberate on-brand Remotion still (packaging = product);

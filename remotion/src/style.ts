@@ -26,6 +26,7 @@ export type NicheVideoProps = {
   audioSrc?: string | null;  // file path / URL of the voiceover
   bgVideo?: string | null;   // optional B-roll (staticFile path or URL)
   bgImages?: string[] | null;// AI scene images (preferred); cycled w/ Ken Burns
+  bgClips?: string[] | null; // motion b-roll clips, interleaved (long-form)
   words?: Word[] | null;     // Whisper word-level timings → exact karaoke
   variant?: number;          // 0-2: subtle layout variation (anti-templated)
   closer?: string | null;    // outro closing line

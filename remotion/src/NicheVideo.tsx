@@ -9,6 +9,7 @@ import { Captions } from "./components/Captions";
 import { FilmGrain } from "./components/FilmGrain";
 import { Vignette } from "./components/Vignette";
 import { SceneImages } from "./components/SceneImages";
+import { SceneVisuals } from "./components/SceneVisuals";
 import { Brand } from "./components/Brand";
 import { Outro } from "./components/Outro";
 
@@ -35,7 +36,7 @@ const KenBurns: React.FC<{ src: string }> = ({ src }) => {
 };
 
 export const NicheVideo: React.FC<NicheVideoProps> = ({
-  style, title, hook, scriptLines, audioSrc, bgVideo, bgImages, words,
+  style, title, hook, scriptLines, audioSrc, bgVideo, bgImages, bgClips, words,
   variant = 0, closer,
 }) => {
   const { fps, width, durationInFrames } = useVideoConfig();
@@ -56,8 +57,10 @@ export const NicheVideo: React.FC<NicheVideoProps> = ({
 
   return (
     <AbsoluteFill style={{ backgroundColor: style.bg }}>
-      {/* Background: AI scene images (preferred) → b-roll → mood decor */}
-      {bgImages && bgImages.length
+      {/* Background: hybrid stills+motion (long-form) → AI stills → b-roll */}
+      {bgClips && bgClips.length
+        ? <SceneVisuals images={bgImages ?? []} clips={bgClips} />
+        : bgImages && bgImages.length
         ? <SceneImages images={bgImages} />
         : bgVideo ? <KenBurns src={bgVideo} /> : null}
       <Decor style={style} />
